@@ -1,0 +1,1430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Medical Terminology Quiz — BMC</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b27;
+    --surface2: #1e2535;
+    --border: #2a3347;
+    --accent: #4f9cf9;
+    --accent2: #7ee8a2;
+    --danger: #ff6b6b;
+    --warn: #ffd166;
+    --text: #e8edf5;
+    --muted: #8b96aa;
+    --correct: #1a3d2b;
+    --correct-border: #4ade80;
+    --wrong: #3d1a1a;
+    --wrong-border: #f87171;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
+    min-height: 100vh;
+    line-height: 1.6;
+    background-image: radial-gradient(ellipse at 20% 50%, rgba(79,156,249,0.04) 0%, transparent 60%),
+                      radial-gradient(ellipse at 80% 20%, rgba(126,232,162,0.04) 0%, transparent 50%);
+  }
+
+  /* ── Header ── */
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(13,17,23,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 64px;
+  }
+  .logo { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--accent); letter-spacing: -0.5px; }
+  .logo span { color: var(--accent2); }
+  .header-stats { display: flex; gap: 1.5rem; font-size: 0.82rem; color: var(--muted); }
+  .stat-pill {
+    background: var(--surface2); border: 1px solid var(--border);
+    padding: 4px 12px; border-radius: 20px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .stat-pill b { color: var(--text); font-weight: 600; }
+
+  /* ── Filters ── */
+  .filter-bar {
+    padding: 1.5rem 2rem 0;
+    display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;
+    max-width: 800px; margin: 0 auto;
+  }
+  .filter-label { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-right: 4px; }
+  .chip {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--muted); padding: 6px 14px; border-radius: 20px;
+    font-size: 0.82rem; cursor: pointer; transition: all .2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .chip:hover, .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chip.active { font-weight: 600; }
+
+  /* ── Progress bar ── */
+  .progress-wrap { padding: 1rem 2rem 0; max-width: 1400px; margin: 0 auto; }
+  .progress-bar { height: 4px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 4px; transition: width .5s ease; width: 0%; }
+  .progress-text { font-size: 0.78rem; color: var(--muted); margin-top: 6px; }
+
+  /* ── Grid ── */
+  .quiz-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    justify-content: center;
+    
+    gap: 1.5rem;
+    padding: 1.5rem 2rem 4rem;
+    max-width: 1400px; margin: 0 auto;
+  }
+
+  /* ── Card ── */
+  .q-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    position: relative;
+    transition: transform .2s, border-color .2s, box-shadow .2s;
+    display: flex; flex-direction: column; gap: 1rem;
+    animation: fadeUp .4s ease both;
+  }
+  .q-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,.4); border-color: #3a4557; }
+  .q-card.answered { border-color: var(--border); }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .card-meta {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 0.75rem;
+  }
+  .q-num { color: var(--muted); font-weight: 500; }
+  .diff-badge {
+    padding: 3px 10px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .diff-mild { background: rgba(126,232,162,.12); color: var(--accent2); }
+  .diff-medium { background: rgba(255,209,102,.12); color: var(--warn); }
+  .diff-hard { background: rgba(255,107,107,.12); color: var(--danger); }
+
+  .topic-tag {
+    font-size: 0.72rem; color: var(--accent); background: rgba(79,156,249,.1);
+    border-radius: 8px; padding: 2px 8px; margin-left: 6px;
+  }
+
+  .q-text {
+    text-align: center;
+    font-size: 0.97rem; color: var(--text); font-weight: 500; line-height: 1.5;
+  }
+
+  /* ── Options ── */
+  .options {
+    align-items: center; display: flex; flex-direction: column; gap: 0.5rem; }
+  .opt {
+    width: 100%;
+    max-width: 650px;
+    color: #ffffff;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 0.65rem 1rem;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 0.88rem;
+    transition: all .18s;
+    position: relative;
+  }
+  .opt:hover:not(.locked) { border-color: var(--accent); background: rgba(79,156,249,.07); }
+  .opt-letter {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--border); color: var(--muted);
+    font-size: 0.72rem; font-weight: 700; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .18s;
+  }
+  .opt:hover:not(.locked) .opt-letter { background: var(--accent); color: #fff; }
+  .opt.correct-ans { background: var(--correct); border-color: var(--correct-border); }
+  .opt.correct-ans .opt-letter { background: var(--correct-border); color: #fff; }
+  .opt.wrong-ans { background: var(--wrong); border-color: var(--wrong-border); }
+  .opt.wrong-ans .opt-letter { background: var(--wrong-border); color: #fff; }
+  .opt.locked { cursor: default; }
+
+  .opt-check { margin-left: auto; font-size: 1rem; }
+
+  /* ── Info tooltip ── */
+  .info-wrap { position: relative; display: inline-flex; }
+  .info-btn {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--muted); font-size: 0.68rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; flex-shrink: 0; transition: all .15s;
+    font-family: serif;
+  }
+  .info-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .info-popup {
+    display: none;
+    position: absolute; bottom: calc(100% + 8px); left: 50%;
+    transform: translateX(-50%);
+    background: #1a2235; border: 1px solid var(--accent);
+    border-radius: 10px; padding: 10px 14px;
+    font-size: 0.8rem; color: var(--text); line-height: 1.5;
+    width: 260px; z-index: 50;
+    box-shadow: 0 8px 24px rgba(0,0,0,.5);
+    pointer-events: none;
+  }
+  .info-popup::after {
+    content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+    border: 6px solid transparent; border-top-color: var(--accent);
+  }
+  .info-btn:hover + .info-popup,
+  .info-wrap:focus-within .info-popup { display: block; }
+
+  /* ── Explanation ── */
+  .explanation {
+    display: none;
+    background: rgba(79,156,249,.06); border: 1px solid rgba(79,156,249,.2);
+    border-radius: 10px; padding: 0.75rem 1rem;
+    font-size: 0.83rem; color: var(--muted); line-height: 1.55;
+  }
+  .explanation.show { display: block; animation: fadeUp .25s ease; }
+  .explanation strong { color: var(--accent2); }
+
+  /* ── Result banner ── */
+  .result-banner {
+    display: none;
+    max-width: 1400px; margin: 2rem auto 0; padding: 0 2rem;
+    animation: fadeUp .4s ease;
+  }
+  .result-inner {
+    background: linear-gradient(135deg, var(--surface2), var(--surface));
+    border: 1px solid var(--border); border-radius: 16px;
+    padding: 2rem; text-align: center;
+  }
+  .result-score { font-family: 'Playfair Display', serif; font-size: 3.5rem; color: var(--accent); line-height: 1; }
+  .result-label { color: var(--muted); margin-top: 4px; font-size: 0.9rem; }
+  .result-msg { margin-top: 1rem; font-size: 1.1rem; font-weight: 500; }
+  .btn-reset {
+    margin-top: 1.5rem;
+    background: var(--accent); color: #fff; border: none;
+    padding: 12px 32px; border-radius: 10px; font-size: 0.9rem;
+    font-weight: 600; cursor: pointer; transition: opacity .2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .btn-reset:hover { opacity: .85; }
+
+  /* ── Submit button ── */
+  .submit-wrap { max-width: 1400px; margin: 0 auto; padding: 0 2rem 2rem; display: flex; gap: 1rem; }
+  .btn-submit {
+    background: linear-gradient(135deg, var(--accent), #3b82f6);
+    color: #fff; border: none; padding: 14px 40px; border-radius: 12px;
+    font-size: 1rem; font-weight: 600; cursor: pointer; transition: all .2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .btn-submit:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(79,156,249,.35); }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* ── Section header ── */
+  .section-header {
+    max-width: 1400px; margin: 2rem auto 0; padding: 0 2rem;
+    border-left: 3px solid var(--accent); padding-left: 1.5rem;
+  }
+  .section-header h2 { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--text); }
+  .section-header p { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
+
+  @media (max-width: 600px) {
+    .quiz-grid { grid-template-columns: 1fr; padding: 1rem; }
+    .filter-bar { padding: 1rem; }
+    header { padding: 0 1rem; }
+  }
+
+  /* ── Mobile Responsive Upgrade ── */
+  @media (max-width: 768px) {
+
+    body {
+      overflow-x: hidden;
+    }
+
+    header {
+      height: auto;
+      padding: 1rem;
+      flex-direction: column;
+      gap: 0.8rem;
+      text-align: center;
+    }
+
+    .logo {
+      font-size: 1.3rem;
+    }
+
+    .header-stats {
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.6rem;
+      width: 100%;
+    }
+
+    .stat-pill {
+      font-size: 0.75rem;
+      padding: 6px 10px;
+    }
+
+    .filter-bar {
+      padding: 1rem;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+
+    .chip {
+      font-size: 0.75rem;
+      padding: 7px 12px;
+    }
+
+    .progress-wrap {
+      padding: 1rem;
+    }
+
+    .quiz-grid {
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .q-card {
+      width: 100%;
+      max-width: 100%;
+      padding: 1rem;
+      border-radius: 14px;
+    }
+
+    .q-text {
+      font-size: 1rem;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    .options {
+      width: 100%;
+      align-items: center;
+    }
+
+    .opt {
+      width: 100%;
+      max-width: 100%;
+      min-height: 56px;
+      font-size: 0.95rem;
+      padding: 0.9rem;
+      border-radius: 12px;
+    }
+
+    .opt-letter {
+      width: 26px;
+      height: 26px;
+      font-size: 0.78rem;
+    }
+
+    .submit-wrap {
+      padding: 1rem;
+      justify-content: center;
+    }
+
+    .btn-submit,
+    .btn-reset {
+      width: 100%;
+      max-width: 100%;
+      font-size: 1rem;
+      padding: 14px;
+      border-radius: 12px;
+    }
+
+    .result-inner {
+      padding: 1.5rem 1rem;
+    }
+
+    .result-score {
+      font-size: 2.8rem;
+    }
+
+    .info-popup {
+      width: 220px;
+      font-size: 0.75rem;
+    }
+  }
+
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Medical<span>Quiz</span></div>
+  <div class="header-stats">
+    <div class="stat-pill">Questions: <b id="totalCount">0</b></div>
+    <div class="stat-pill">Answered: <b id="answeredCount">0</b></div>
+    <div class="stat-pill">Score: <b id="scoreCount">0</b></div>
+  </div>
+</header>
+
+<div class="filter-bar">
+  <span class="filter-label">Topic</span>
+  <button class="chip active" onclick="filterCards('all',this)">All</button>
+  <button class="chip" onclick="filterCards('skeletal',this)">Skeletal System</button>
+  <button class="chip" onclick="filterCards('anatomy',this)">Anatomical Positions</button>
+  <button class="chip" onclick="filterCards('instruments',this)">Instruments & Procedures</button>
+  <button class="chip" onclick="filterCards('specialties',this)">Specialties & Specialists</button>
+  &nbsp;
+  <span class="filter-label">Difficulty</span>
+  <button class="chip" onclick="filterDiff('all',this)">All</button>
+  <button class="chip" onclick="filterDiff('mild',this)">Mild</button>
+  <button class="chip" onclick="filterDiff('medium',this)">Medium</button>
+  <button class="chip" onclick="filterDiff('hard',this)">Hard</button>
+</div>
+
+<div class="progress-wrap">
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="progress-text" id="progressText">0 of 0 answered</div>
+</div>
+
+<div id="resultBanner" class="result-banner">
+  <div class="result-inner">
+    <div class="result-score" id="resultScore">0%</div>
+    <div class="result-label">Final Score</div>
+    <div class="result-msg" id="resultMsg"></div>
+    <button class="btn-reset" onclick="resetAll()">Reset All Questions</button>
+  </div>
+</div>
+
+<div class="quiz-grid" id="quizGrid"></div>
+
+<div class="submit-wrap">
+  <button class="btn-submit" onclick="submitAll()">Submit &amp; See Results</button>
+</div>
+
+<script>
+const ALL_QUESTIONS = [
+
+// ═══════════════════════════════════
+// SECTION: SKELETAL SYSTEM
+// ═══════════════════════════════════
+
+// — MILD —
+{t:'skeletal',d:'mild',q:'How many bones does the adult human skeleton consist of?',
+ opts:['186','196','206','216'],ans:2,
+ exp:'The adult human skeleton consists of approximately <strong>206 bones</strong>.',
+ why:['186 is too low — not the correct count.','196 is not the standard number.','<strong>206 is correct</strong>.','216 exceeds the actual number.']},
+
+{t:'skeletal',d:'mild',q:'The skeletal system serves as the body\'s ___.',
+ opts:['Central processing unit','Central framework','Primary pump','Filtration system'],ans:1,
+ exp:'The skeletal system is the body\'s <strong>central framework</strong>, consisting of connective tissue including bones, cartilage, tendons, and ligaments.',
+ why:['That describes the brain.','<strong>Central framework</strong> is the correct term.','That describes the heart.','That describes the kidneys.']},
+
+{t:'skeletal',d:'mild',q:'Which of the following is NOT a function of the skeletal system?',
+ opts:['Supports the body','Facilitates movement','Produces hormones','Produces blood cells'],ans:2,
+ exp:'The skeletal system supports, facilitates movement, protects organs, produces blood cells, and stores/releases minerals and fat. <strong>Producing hormones</strong> is an endocrine function.',
+ why:['This IS a function of the skeleton.','This IS a function of the skeleton.','<strong>Hormones are produced by endocrine glands</strong>, not the skeleton.','This IS a function — in bone marrow.']},
+
+{t:'skeletal',d:'mild',q:'The skeleton is subdivided into the appendicular skeleton and the ___.',
+ opts:['Peripheral skeleton','Axial skeleton','Central skeleton','Cranial skeleton'],ans:1,
+ exp:'The skeletal system is subdivided into the <strong>appendicular skeleton</strong> and the <strong>axial skeleton</strong>.',
+ why:['There is no "peripheral skeleton" classification.','<strong>Axial skeleton</strong> is correct.','Not a standard classification.','Not a standard classification.']},
+
+{t:'skeletal',d:'mild',q:'The femur is known as the ___ bone.',
+ opts:['Kneecap','Thigh','Lower leg','Ankle'],ans:1,
+ exp:'The <strong>femur</strong> is the thigh bone and also the longest bone in the human body.',
+ why:['The kneecap is the patella.','<strong>Femur = thigh bone</strong>. Correct!','The lower leg has the tibia and fibula.','Ankle bones are the tarsals.']},
+
+{t:'skeletal',d:'mild',q:'What is the medical term for the kneecap?',
+ opts:['Fibula','Tibia','Patella','Femur'],ans:2,
+ exp:'The <strong>patella</strong> is the kneecap — a sesamoid bone located at the front of the knee.',
+ why:['Fibula is the smaller lower leg bone.','Tibia is the larger lower leg bone.','<strong>Patella</strong> is correct!','Femur is the thigh bone.']},
+
+{t:'skeletal',d:'mild',q:'The clavicle is also known as the ___.',
+ opts:['Shoulder blade','Breastbone','Collarbone','Elbow bone'],ans:2,
+ exp:'The <strong>clavicle</strong> is the collarbone — it connects the sternum to the scapula.',
+ why:['Shoulder blade is the scapula.','Breastbone is the sternum.','<strong>Clavicle = collarbone</strong>. Correct!','There is no single "elbow bone" term.']},
+
+{t:'skeletal',d:'mild',q:'The scapula is the ___.',
+ opts:['Collarbone','Shoulder bone','Wrist bone','Hip bone'],ans:1,
+ exp:'The <strong>scapula</strong> is the shoulder bone (shoulder blade). It is classified as a flat bone.',
+ why:['Collarbone is the clavicle.','<strong>Scapula = shoulder bone</strong>. Correct!','Wrist bones are carpals.','Hip bone is the pelvis.']},
+
+{t:'skeletal',d:'mild',q:'The sternum is also called the ___.',
+ opts:['Shoulder blade','Rib','Breastbone','Collarbone'],ans:2,
+ exp:'The <strong>sternum</strong> is the breastbone. The rib cage is formed by the sternum and 12 pairs of ribs.',
+ why:['Shoulder blade is the scapula.','Ribs are separate bones from the sternum.','<strong>Sternum = breastbone</strong>. Correct!','Collarbone is the clavicle.']},
+
+{t:'skeletal',d:'mild',q:'Carpals are the bones of the ___.',
+ opts:['Foot','Ankle','Wrist','Fingers'],ans:2,
+ exp:'<strong>Carpals</strong> are the 8 small bones of the wrist. Metacarpals form the hand, and phalanges are the finger bones.',
+ why:['Foot bones are metatarsals and tarsals.','Ankle bones are tarsals.','<strong>Carpals = wrist bones</strong>. Correct!','Finger bones are phalanges.']},
+
+{t:'skeletal',d:'mild',q:'Tarsals are the bones of the ___.',
+ opts:['Wrist','Hand','Ankle','Knee'],ans:2,
+ exp:'<strong>Tarsals</strong> are the 7 ankle bones. Tarsals in the foot correspond to carpals in the wrist.',
+ why:['Wrist bones are carpals.','Hand bones are metacarpals.','<strong>Tarsals = ankle bones</strong>. Correct!','The knee has the patella (kneecap).']},
+
+{t:'skeletal',d:'mild',q:'Metatarsals are the bones of the ___.',
+ opts:['Ankle','Foot','Wrist','Lower leg'],ans:1,
+ exp:'<strong>Metatarsals</strong> are the 5 long bones of the foot, similar to how metacarpals are the 5 hand bones.',
+ why:['Ankle bones are tarsals.','<strong>Metatarsals = foot bones</strong>. Correct!','Wrist bones are carpals.','Lower leg has tibia and fibula.']},
+
+{t:'skeletal',d:'mild',q:'The humerus is the bone of the ___.',
+ opts:['Forearm','Upper arm','Lower leg','Shoulder'],ans:1,
+ exp:'The <strong>humerus</strong> is the elongated bone extending from the shoulder to the elbow — the upper arm bone.',
+ why:['Forearm bones are radius and ulna.','<strong>Humerus = upper arm bone</strong>. Correct!','Lower leg has tibia and fibula.','The shoulder is the scapula/clavicle.']},
+
+{t:'skeletal',d:'mild',q:'The ulna is described as ___.',
+ opts:['The lateral forearm bone','The largest forearm bone','The shortest arm bone','The knee bone'],ans:1,
+ exp:'The <strong>ulna</strong> is the largest bone of the forearm (on the little-finger side), while the radius is on the lateral/thumb side.',
+ why:['The radius is the lateral forearm bone (thumb side).','<strong>Ulna = largest forearm bone</strong>. Correct!','The ulna is not the shortest.','The knee bone is the patella.']},
+
+{t:'skeletal',d:'mild',q:'The radius is located ___.',
+ opts:['On the little-finger side of the forearm','On the thumb side of the forearm','Above the elbow','In the upper arm'],ans:1,
+ exp:'The <strong>radius</strong> is on the lateral (thumb) side of the forearm, while the ulna is on the medial (little-finger) side.',
+ why:['That is the ulna.','<strong>Radius = thumb side</strong>. Correct!','The radius is below the elbow.','The upper arm bone is the humerus.']},
+
+// — MEDIUM —
+{t:'skeletal',d:'medium',q:'How many bones are in the appendicular skeleton of an adult?',
+ opts:['80','106','126','146'],ans:2,
+ exp:'The appendicular skeleton of an adult contains <strong>126 bones</strong>, including all bones of the upper and lower limbs plus the girdles.',
+ why:['80 is too few.','106 is not the correct number.','<strong>126 bones</strong> is correct!','146 is too many.']},
+
+{t:'skeletal',d:'medium',q:'The axial skeleton serves as the ___.',
+ opts:['Limb support structure','Central core unit','Peripheral attachment','Pelvic girdle'],ans:1,
+ exp:'The <strong>axial skeleton</strong> forms the central core unit, consisting of the skull, vertebral column, and rib cage.',
+ why:['Limb support is the appendicular skeleton\'s role.','<strong>Central core unit</strong> is correct!','The axial skeleton is central, not peripheral.','The pelvic girdle is part of the appendicular skeleton.']},
+
+{t:'skeletal',d:'medium',q:'The skull consists of how many cranial and facial bones?',
+ opts:['16','18','22','26'],ans:2,
+ exp:'The skull consists of <strong>22</strong> cranial and facial bones, tightly fused together. The mandible is the only mobile bone.',
+ why:['16 is too few.','18 is not the standard count.','<strong>22 bones</strong> is correct!','26 is the number of vertebral column bones.']},
+
+{t:'skeletal',d:'medium',q:'Which bone of the skull is the ONLY mobile bone?',
+ opts:['Frontal bone','Temporal bone','Mandible','Maxilla'],ans:2,
+ exp:'The <strong>mandible</strong> (lower jaw) is the only mobile bone in the skull. All other 21 bones are tightly fused.',
+ why:['The frontal bone is fused.','The temporal bone is fused.','<strong>Mandible</strong> is the only mobile skull bone!','The maxilla is fused.']},
+
+{t:'skeletal',d:'medium',q:'The vertebral column in an adult consists of how many bones?',
+ opts:['22','24','26','33'],ans:2,
+ exp:'The adult vertebral column has <strong>26 bones</strong>: 24 separate vertebrae plus the sacrum and coccyx (each fused).',
+ why:['22 is the number of skull bones.','24 refers only to the separate vertebrae, not including sacrum and coccyx.','<strong>26 bones</strong> in the adult spine.','33 is the total in children before fusion.']},
+
+{t:'skeletal',d:'medium',q:'How many cervical vertebrae are in the vertebral column?',
+ opts:['5','7','10','12'],ans:1,
+ exp:'There are <strong>7 cervical vertebrae</strong> in the neck region of the vertebral column.',
+ why:['5 is the number of lumbar vertebrae.','<strong>7 cervical vertebrae</strong>. Correct!','10 is not a standard region count.','12 is the number of thoracic vertebrae.']},
+
+{t:'skeletal',d:'medium',q:'The thoracic vertebrae are located in the ___.',
+ opts:['Neck','Chest','Lower back','Tailbone'],ans:1,
+ exp:'The 12 <strong>thoracic</strong> vertebrae are located in the chest region, and they articulate with the 12 pairs of ribs.',
+ why:['Neck = cervical (7).','<strong>Thoracic = chest</strong>. Correct!','Lower back = lumbar (5).','Tailbone = coccyx.']},
+
+{t:'skeletal',d:'medium',q:'How many pairs of ribs form the rib cage?',
+ opts:['10','11','12','14'],ans:2,
+ exp:'The rib cage is formed by the sternum and <strong>12 pairs of ribs</strong>.',
+ why:['Not 10 pairs.','Not 11 pairs.','<strong>12 pairs</strong> is correct!','14 pairs would be too many.']},
+
+{t:'skeletal',d:'medium',q:'The pectoral (shoulder) girdle is formed by two bones. Which pair is correct?',
+ opts:['Humerus and Radius','Clavicle and Scapula','Sternum and Clavicle','Scapula and Humerus'],ans:1,
+ exp:'The pectoral girdle is formed by the <strong>clavicle</strong> (collarbone) and the <strong>scapula</strong> (shoulder blade).',
+ why:['Humerus and radius are arm bones, not the girdle.','<strong>Clavicle + Scapula</strong> form the shoulder girdle!','Sternum is part of the axial skeleton.','Humerus is the upper arm bone.']},
+
+{t:'skeletal',d:'medium',q:'The pelvic girdle consists of a pair of hip bones attached at the ___.',
+ opts:['Sacrum','Coccyx','Pubis','Ischium'],ans:2,
+ exp:'The pelvic girdle consists of a pair of hip bones attached to each other at the <strong>pubis</strong> (pubic symphysis).',
+ why:['The sacrum is the posterior attachment point.','The coccyx is the tailbone.','<strong>Pubis</strong> is the anterior joint — correct!','The ischium is part of the hip bone, not the attachment joint.']},
+
+{t:'skeletal',d:'medium',q:'Each hip bone is made up of three parts. Which option lists all three correctly?',
+ opts:['Femur, Tibia, Patella','Ileum, Ischium, Pubis','Sacrum, Coccyx, Ileum','Ileum, Femur, Pubis'],ans:1,
+ exp:'Each hip bone is made up of <strong>ileum (ilium), ischium, and pubis</strong> — three bones that fuse during development.',
+ why:['These are lower limb bones, not hip bone parts.','<strong>Ilium, Ischium, and Pubis</strong> are correct!','Sacrum and coccyx are axial skeleton bones.','Femur is a lower limb bone.']},
+
+{t:'skeletal',d:'medium',q:'The lower limb consists of how many bones?',
+ opts:['26','28','30','32'],ans:2,
+ exp:'The lower limb consists of <strong>30 bones</strong>, including the femur, patella, tibia, fibula, tarsals, metatarsals, and phalanges.',
+ why:['26 is less than the actual count.','28 is close but not correct.','<strong>30 bones</strong> in the lower limb!','32 is too many.']},
+
+{t:'skeletal',d:'medium',q:'Which bones are classified as "sesamoid"?',
+ opts:['Vertebrae','Femur','Patella','Scapula'],ans:2,
+ exp:'<strong>Sesamoid bones</strong> are small, rounded bones embedded in tendons. The <strong>patella</strong> is the primary example.',
+ why:['Vertebrae are irregular bones.','Femur is a long bone.','<strong>Patella</strong> is the classic sesamoid bone!','Scapula is a flat bone.']},
+
+{t:'skeletal',d:'medium',q:'Irregular bones are exemplified by ___.',
+ opts:['Carpals','Femur','Sternum','Vertebrae'],ans:3,
+ exp:'<strong>Irregular bones</strong> don\'t fit into other shape categories. <strong>Vertebrae</strong> are the classic example.',
+ why:['Carpals are short bones.','Femur is a long bone.','Sternum is a flat bone.','<strong>Vertebrae = irregular bones</strong>. Correct!']},
+
+{t:'skeletal',d:'medium',q:'Which is the longest bone in the human body?',
+ opts:['Humerus','Tibia','Femur','Fibula'],ans:2,
+ exp:'The <strong>femur</strong> (thigh bone) is the longest and strongest bone in the human body.',
+ why:['Humerus is the upper arm bone.','Tibia is a lower leg bone.','<strong>Femur = longest bone</strong>. Correct!','Fibula is the smaller lower leg bone.']},
+
+// — HARD —
+{t:'skeletal',d:'hard',q:'The term "articular" is derived from which root + suffix combination?',
+ opts:['Arth + -ular','Articul + -ar','Arthr + -al','Artir + -cular'],ans:1,
+ exp:'<strong>Articular</strong> = root "articul" (joint) + suffix "-ar" (referring to). It means "referring to joints."',
+ why:['Arth is a different root (used in arthroplasty).','<strong>Articul + -ar</strong> is correct!','Arthr + -al would be "arthral" — not standard.','Not a real word breakdown.']},
+
+{t:'skeletal',d:'hard',q:'Osteoarthritis causes degradation of what structure?',
+ opts:['Periosteum','Articular cartilage','Intervertebral discs','Costal cartilage'],ans:1,
+ exp:'<strong>Osteoarthritis</strong> causes degradation of <strong>articular cartilage</strong>, leading to pain, inflammation, and loss of motion in the joint.',
+ why:['Periosteum is the bone covering membrane.','<strong>Articular cartilage</strong> is degraded in osteoarthritis!','Disc degeneration is a separate condition.','Costal cartilage connects ribs to the sternum.']},
+
+{t:'skeletal',d:'hard',q:'The medical term "costal" refers to ___.',
+ opts:['The skull','The ribs','The vertebrae','The sternum'],ans:1,
+ exp:'<strong>Costal</strong> = root "cost" (rib) + suffix "-al" (referring to). It means "referring to the ribs." Costal cartilage joins the rib to the breastbone.',
+ why:['Skull-related terms use "crani."','<strong>Costal = referring to ribs</strong>. Correct!','Vertebra-related terms use "vertebr."','Sternum-related terms use "stern."']},
+
+{t:'skeletal',d:'hard',q:'Which medical term means "inflammation of bone"?',
+ opts:['Osteitis','Chondritis','Arthritis','Osteoplasty'],ans:0,
+ exp:'<strong>Osteitis</strong> = root "oste" (bone) + suffix "-itis" (inflammation). It means inflammation of bone and can lead to bone loss.',
+ why:['<strong>Osteitis = inflammation of bone</strong>. Correct!','Chondritis = inflammation of cartilage.','Arthritis = inflammation of joints.','Osteoplasty = surgical repair of bone.']},
+
+{t:'skeletal',d:'hard',q:'What does the term "intervertebral" mean?',
+ opts:['Referring to the vertebrae','Between the vertebrae','Above the vertebrae','Removal of a vertebra'],ans:1,
+ exp:'<strong>Intervertebral</strong> = prefix "inter-" (between) + root "vertebr" (vertebrae) + suffix "-al" (referring to). Intervertebral discs separate each vertebra.',
+ why:['That would be "vertebral."','<strong>Intervertebral = between the vertebrae</strong>!','That would be "supravertebral."','That would be a "-ectomy" suffix.']},
+
+{t:'skeletal',d:'hard',q:'Arthroplasty refers to ___.',
+ opts:['Removal of a joint','Inflammation of a joint','Surgical repair of a joint','X-ray of a joint'],ans:2,
+ exp:'<strong>Arthroplasty</strong> = root "arthr" (joint) + combining vowel "o" + suffix "-plasty" (surgical repair). It means surgical repair of a joint.',
+ why:['Removal would be "-ectomy."','Inflammation would be "-itis."','<strong>Arthroplasty = surgical repair of a joint</strong>!','X-ray would use "-graphy."']},
+
+{t:'skeletal',d:'hard',q:'What does "chondritis" mean?',
+ opts:['Inflammation of bone','Inflammation of cartilage','Surgical repair of cartilage','Study of cartilage'],ans:1,
+ exp:'<strong>Chondritis</strong> = root "chondr" (cartilage) + suffix "-itis" (inflammation). It means inflammation of cartilage.',
+ why:['Inflammation of bone = osteitis.','<strong>Chondritis = inflammation of cartilage</strong>!','Surgical repair = "-plasty."','Study of = "-logy."']},
+
+{t:'skeletal',d:'hard',q:'The term "orthopedics" literally combines which roots?',
+ opts:['Bone + child','Straight + child','Bone + foot','Joint + straight'],ans:1,
+ exp:'<strong>Orthopedics</strong> = root "orth" (straight/normal) + combining form "o" + root "ped" (child). It is a branch of surgery dealing with correction/prevention of skeletal deformities.',
+ why:['Bone = oste/o, not orth.','<strong>Orth (straight) + ped (child)</strong> is correct!','Foot = pod, not ped in this context.','Joint = arthr.']},
+
+{t:'skeletal',d:'hard',q:'The suffix "-ist" in "orthopedist" means ___.',
+ opts:['Study of','Field of practice','A specialist in something','Inflammation'],ans:2,
+ exp:'The suffix <strong>"-ist"</strong> means "a specialist in something." An orthopedist is a specialist in bone diseases and treatment, particularly in children.',
+ why:['-logy means study of.','-ics means field of practice.','<strong>-ist = specialist</strong>. Correct!','-itis means inflammation.']},
+
+{t:'skeletal',d:'hard',q:'The sacrum is described as ___.',
+ opts:['The tailbone','Lower part of the backbone attached to the hip','The pelvic floor','The base of the skull'],ans:1,
+ exp:'The <strong>sacrum</strong> is the lower part of the backbone (vertebral column) that is attached to the hip bones. It is 1 fused bone in adults.',
+ why:['The tailbone is the coccyx.','<strong>Sacrum = lower backbone attached to hip</strong>. Correct!','The pelvic floor is muscular, not the sacrum.','That would be the occipital bone.']},
+
+{t:'skeletal',d:'hard',q:'How many phalanges are in the lower limb, and how are they distributed?',
+ opts:['14 total: 3 in each toe','14 total: 2 in great toe, 3 in each other toe','12 total: 2 in each toe','10 total: 2 per toe, 5 toes'],ans:1,
+ exp:'There are <strong>14 phalanges</strong> in the foot: 2 in the great toe and 3 in each of the other four toes (2 + 4×3 = 14).',
+ why:['3 per toe would be 15.','<strong>14 total, 2 in great toe, 3 in others</strong>. Correct!','12 would be too few.','10 is incorrect.']},
+
+{t:'skeletal',d:'hard',q:'The root "femor" refers to the ___.',
+ opts:['Tibia','Fibula','Femur or thighbone','Patella'],ans:2,
+ exp:'The root <strong>"femor"</strong> means femur or thighbone. "Femoral" (femor + -al) means "referring to the femur," as in the femoral artery.',
+ why:['Tibia has no "femor" root.','Fibula relates to the calf/lower leg.','<strong>Femor = femur/thighbone</strong>. Correct!','Patella is the kneecap.']},
+
+// ═══════════════════════════════════
+// SECTION: ANATOMICAL POSITIONS
+// ═══════════════════════════════════
+
+// — MILD —
+{t:'anatomy',d:'mild',q:'The correct anatomical position involves standing upright with ___.',
+ opts:['Feet apart, palms backward','Feet together, facing forward, arms at sides with palms forward','Feet together, arms raised above head','Feet apart, body bent forward'],ans:1,
+ exp:'The correct anatomical position is: <strong>standing upright, feet together, facing forward, arms at the sides with palms forward</strong>.',
+ why:['Feet should be together, palms forward.','<strong>This is the correct anatomical position</strong>!','Arms are at the sides, not raised.','The body is erect, not bent.']},
+
+{t:'anatomy',d:'mild',q:'Body planes are described as ___.',
+ opts:['Physical barriers within the body','Imaginary vertical and horizontal lines dividing the body for descriptive purposes','The actual cuts made during surgery','The layers of the skin'],ans:1,
+ exp:'<strong>Body planes</strong> are imaginary vertical and horizontal lines used to divide the body into sections for descriptive purposes.',
+ why:['They are imaginary, not physical barriers.','<strong>Imaginary lines for descriptive purposes</strong> is correct!','Surgical cuts are called incisions.','Skin layers are strata.']},
+
+{t:'anatomy',d:'mild',q:'The sagittal plane divides the body into ___ portions.',
+ opts:['Upper and lower','Front and back','Left and right','Medial and lateral'],ans:2,
+ exp:'The <strong>sagittal plane</strong> is a vertical plane that divides the body into <strong>left and right</strong> portions.',
+ why:['Upper and lower = transverse plane.','Front and back = frontal/coronal plane.','<strong>Sagittal = left and right</strong>. Correct!','Medial/lateral are directional terms, not a plane division.']},
+
+{t:'anatomy',d:'mild',q:'The frontal plane is also known as the ___.',
+ opts:['Axial plane','Sagittal plane','Coronal plane','Oblique plane'],ans:2,
+ exp:'The <strong>frontal plane</strong> divides the body into anterior (front) and posterior (back) portions. It is also known as the <strong>coronal plane</strong>.',
+ why:['Axial plane = transverse plane.','Sagittal divides left/right.','<strong>Frontal = coronal plane</strong>. Correct!','Oblique is at a 45° angle.']},
+
+{t:'anatomy',d:'mild',q:'The transverse plane is also called the ___.',
+ opts:['Coronal plane','Sagittal plane','Axial or horizontal plane','Oblique plane'],ans:2,
+ exp:'The <strong>transverse plane</strong> divides the body into superior (upper) and inferior (lower) portions. It is also called the <strong>axial plane or horizontal plane</strong>.',
+ why:['Coronal = frontal plane.','Sagittal divides left/right.','<strong>Transverse = axial/horizontal plane</strong>!','Oblique is at 45°.']},
+
+{t:'anatomy',d:'mild',q:'"Anterior" means ___.',
+ opts:['Located in the back','Located in the front','Located above','Located below'],ans:1,
+ exp:'<strong>Anterior</strong> = root "anter" (front) + suffix "-ior" (pertaining to). It means located in the front. Another name for anterior is <strong>ventral</strong>.',
+ why:['Back = posterior (dorsal).','<strong>Anterior = front</strong>. Correct!','Above = superior.','Below = inferior.']},
+
+{t:'anatomy',d:'mild',q:'"Posterior" is another name for ___.',
+ opts:['Ventral','Dorsal','Lateral','Medial'],ans:1,
+ exp:'<strong>Posterior</strong> means located in the back. Another name for posterior is <strong>dorsal</strong>. Similarly, anterior = ventral.',
+ why:['Ventral = anterior (front).','<strong>Posterior = dorsal</strong>. Correct!','Lateral = away from midline.','Medial = toward midline.']},
+
+{t:'anatomy',d:'mild',q:'"Superior" means ___.',
+ opts:['Toward the feet','Toward the back','Uppermost, above, or toward the head','Away from the midline'],ans:2,
+ exp:'<strong>Superior</strong> = root "super" (above) + suffix "-ior" (pertaining to). It means uppermost, above, or toward the head. Example: lungs are superior to the diaphragm.',
+ why:['Toward the feet = inferior.','Toward the back = posterior/dorsal.','<strong>Superior = toward the head/above</strong>!','Away from midline = lateral.']},
+
+{t:'anatomy',d:'mild',q:'"Inferior" is the opposite of ___.',
+ opts:['Lateral','Posterior','Superior','Proximal'],ans:2,
+ exp:'<strong>Inferior</strong> means lowermost, below, or toward the feet. It is the direct opposite of <strong>superior</strong>.',
+ why:['Lateral\'s opposite is medial.','Posterior\'s opposite is anterior.','<strong>Inferior ↔ Superior</strong>. Correct!','Proximal\'s opposite is distal.']},
+
+{t:'anatomy',d:'mild',q:'"Medial" means ___.',
+ opts:['Away from the midline','Toward or nearer to the midline','Toward the head','Toward the back'],ans:1,
+ exp:'<strong>Medial</strong> = root "medi" (toward) + suffix "-al" (pertaining to). It means the direction toward, or nearer, the midline.',
+ why:['Away from midline = lateral.','<strong>Medial = toward the midline</strong>!','Toward the head = superior.','Toward the back = posterior.']},
+
+{t:'anatomy',d:'mild',q:'The dorsal cavity is located in the ___ of the body.',
+ opts:['Front','Back','Left side','Right side'],ans:1,
+ exp:'The <strong>dorsal cavity</strong> is the cavity in the BACK of the body. "Dorsal" means back. It contains the cranial and spinal cavities.',
+ why:['Front = ventral cavity.','<strong>Dorsal = back of body</strong>. Correct!','Not a left-side cavity.','Not a right-side cavity.']},
+
+{t:'anatomy',d:'mild',q:'The cranial cavity is located ___.',
+ opts:['Within the vertebral column','Within the skull','Within the thorax','Within the abdomen'],ans:1,
+ exp:'The <strong>cranial cavity</strong> is located within the skull and surrounds and protects the brain.',
+ why:['Within the vertebral column = spinal cavity.','<strong>Cranial cavity = within the skull</strong>!','Within the thorax = thoracic cavity.','Within the abdomen = abdominal cavity.']},
+
+{t:'anatomy',d:'mild',q:'The thoracic cavity surrounds and protects ___.',
+ opts:['The brain and spinal cord','The heart and lungs','The digestive organs','The reproductive organs'],ans:1,
+ exp:'The <strong>thoracic cavity</strong> surrounds and protects the <strong>heart and lungs</strong>.',
+ why:['Brain = cranial; spinal cord = spinal cavity.','<strong>Thoracic cavity protects heart and lungs</strong>!','Digestive organs = abdominal cavity.','Reproductive organs = pelvic cavity.']},
+
+// — MEDIUM —
+{t:'anatomy',d:'medium',q:'The oblique plane divides the body at a ___ angle.',
+ opts:['30°','45°','60°','90°'],ans:1,
+ exp:'The <strong>oblique plane</strong> divides the body at a <strong>45° angle</strong> that lies between the horizontal and vertical planes.',
+ why:['30° is too shallow.','<strong>45° = oblique plane angle</strong>. Correct!','60° is too steep.','90° would be vertical (sagittal or frontal).']},
+
+{t:'anatomy',d:'medium',q:'The term "ventral" refers to ___.',
+ opts:['The back of the organ or body','The front or belly side of the organ or body','The upper portion of the body','The lower portion of the body'],ans:1,
+ exp:'<strong>Ventral</strong> = root "ventr" (belly side) + suffix "-al" (pertaining to). It refers to the front or belly side. Ventral is the opposite of dorsal.',
+ why:['Back = dorsal.','<strong>Ventral = front/belly side</strong>. Correct!','Upper = superior.','Lower = inferior.']},
+
+{t:'anatomy',d:'medium',q:'"Proximal" means ___.',
+ opts:['Away from the trunk','Far from the point of attachment','Toward the trunk or near the point of attachment','Below the organ'],ans:2,
+ exp:'<strong>Proximal</strong> = root "proxim" (near) + suffix "-al." It means toward the trunk or near the point of attachment. Example: elbow is proximal to the wrist.',
+ why:['Away from trunk = distal.','Far from attachment = distal.','<strong>Proximal = toward the trunk</strong>!','Below = inferior.']},
+
+{t:'anatomy',d:'medium',q:'"Distal" means ___.',
+ opts:['Near the trunk','Toward the head','Away from the trunk or far from the point of attachment','Toward the midline'],ans:2,
+ exp:'<strong>Distal</strong> = root "dist" (far) + suffix "-al." It means away from the trunk or far from the point of attachment. Example: wrist is distal to the shoulder.',
+ why:['Near trunk = proximal.','Toward head = superior.','<strong>Distal = away from the trunk</strong>!','Toward midline = medial.']},
+
+{t:'anatomy',d:'medium',q:'The "lateral" direction means ___.',
+ opts:['Toward the midline','Away from the midline','Toward the head','Toward the feet'],ans:1,
+ exp:'<strong>Lateral</strong> = root "later" (away) + suffix "-al." It means away from the midline. Lateral is the opposite of medial.',
+ why:['Toward midline = medial.','<strong>Lateral = away from midline</strong>!','Toward head = superior.','Toward feet = inferior.']},
+
+{t:'anatomy',d:'medium',q:'The spinal cavity is located within the ___ and protects the ___.',
+ opts:['Skull; brain','Vertebral column; spinal cord','Rib cage; heart','Pelvic bones; bladder'],ans:1,
+ exp:'The <strong>spinal cavity</strong> is located within the <strong>vertebral column</strong> and surrounds and protects the <strong>spinal cord</strong>.',
+ why:['Skull/brain = cranial cavity.','<strong>Spinal cavity = vertebral column + spinal cord</strong>!','Rib cage/heart = thoracic cavity.','Pelvic bones/bladder = pelvic cavity.']},
+
+{t:'anatomy',d:'medium',q:'The abdominal cavity contains primarily ___.',
+ opts:['The heart and lungs','The brain','The major organs of digestion','The reproductive organs'],ans:2,
+ exp:'The <strong>abdominal cavity</strong> contains primarily the <strong>major organs of digestion</strong> such as the liver, stomach, pancreas, and intestines.',
+ why:['Heart and lungs = thoracic cavity.','Brain = cranial cavity.','<strong>Abdominal = digestive organs</strong>!','Reproductive organs = pelvic cavity.']},
+
+{t:'anatomy',d:'medium',q:'The pelvic cavity is the space formed by the ___ and contains the organs of the ___ system.',
+ opts:['Ribs; digestive','Vertebrae; nervous','Hip bones; reproductive','Sternum; respiratory'],ans:2,
+ exp:'The <strong>pelvic cavity</strong> is the space formed by the <strong>hip bones</strong> and contains the organs of the <strong>reproductive system</strong> (plus bladder).',
+ why:['Ribs form the thoracic cavity.','Vertebrae form the spinal cavity.','<strong>Hip bones; reproductive system</strong>. Correct!','Sternum is part of the thoracic cage.']},
+
+{t:'anatomy',d:'medium',q:'The abdominopelvic cavity refers to which two cavities combined?',
+ opts:['Thoracic + Pelvic','Cranial + Spinal','Abdominal + Pelvic','Dorsal + Ventral'],ans:2,
+ exp:'The <strong>abdominopelvic cavity</strong> (abdomin/o + pelv + -ic) refers to the <strong>abdominal and pelvic cavities</strong> as a single unit.',
+ why:['Thoracic + Pelvic are not the same as abdominopelvic.','Cranial + Spinal = dorsal cavity.','<strong>Abdominal + Pelvic = abdominopelvic</strong>!','Dorsal and ventral describe the two main body cavities, not subdivisions.']},
+
+{t:'anatomy',d:'medium',q:'Which statement correctly uses a directional term?',
+ opts:['The lungs are inferior to the diaphragm','The stomach is superior to the diaphragm','The lungs are superior to the diaphragm','The feet are proximal to the knees'],ans:2,
+ exp:'The <strong>lungs are superior</strong> (above) the diaphragm. The stomach is <strong>inferior</strong> (below) the diaphragm.',
+ why:['Lungs are ABOVE (superior to) the diaphragm.','Stomach, not lungs, is inferior to the diaphragm.','<strong>Lungs are superior to the diaphragm</strong>!','Feet are DISTAL to the knees.']},
+
+// — HARD —
+{t:'anatomy',d:'hard',q:'In terms of anatomic reference systems, which is NOT one of the four systems listed?',
+ opts:['Body planes','Body directions','Body cavities','Body temperatures'],ans:3,
+ exp:'The four anatomical reference systems are: body <strong>planes</strong>, body <strong>directions</strong>, body <strong>cavities</strong>, and structural <strong>units</strong>. Body temperatures is not one of them.',
+ why:['Body planes IS one of the four.','Body directions IS one of the four.','Body cavities IS one of the four.','<strong>Body temperatures is NOT one of the four systems</strong>!']},
+
+{t:'anatomy',d:'hard',q:'The root "ventr" with suffix "-al" gives us "ventral," which means pertaining to the ___.',
+ opts:['Back','Top','Belly side/front','Below'],ans:2,
+ exp:'"Ventr" = belly side of the body + "-al" = pertaining to → <strong>ventral = pertaining to the belly/front side</strong>.',
+ why:['Back = dors (dorsal).','Top = super (superior).','<strong>Ventr + -al = front/belly side</strong>!','Below = infer (inferior).']},
+
+{t:'anatomy',d:'hard',q:'The combining form "abdomin/o" means ___, and "pelv" means ___.',
+ opts:['Chest; abdomen','Abdomen; pelvis','Pelvis; abdomen','Back; chest'],ans:1,
+ exp:'<strong>abdomin/o</strong> = abdomen, <strong>pelv</strong> = pelvis. Together with "-ic" (pertaining to), they form "abdominopelvic."',
+ why:['Chest = thorac.','<strong>abdomin/o = abdomen; pelv = pelvis</strong>. Correct!','These are reversed.','Neither relates to back or chest.']},
+
+{t:'anatomy',d:'hard',q:'The root "crani" in "cranial" pertains to the ___.',
+ opts:['Spine','Skull','Pelvis','Sternum'],ans:1,
+ exp:'"Crani" means skull. <strong>Cranial</strong> = "crani" (skull) + "-al" (pertaining to) = pertaining to the skull. The cranial cavity is within the skull.',
+ why:['Spine uses "vertebr" or "spinal."','<strong>Crani = skull</strong>. Correct!','Pelvis uses "pelv."','Sternum uses "stern."']},
+
+{t:'anatomy',d:'hard',q:'These terminologies are used for the purpose of ___.',
+ opts:['Making medical language more complicated','Precision and reduction of medical error','Replacing common language entirely','Entertainment in medical schools'],ans:1,
+ exp:'Anatomical terminology is used <strong>for the purpose of precision and reduction of medical error</strong>, ensuring clear communication among healthcare professionals.',
+ why:['The goal is clarity, not complexity.','<strong>Precision and reduction of medical error</strong> is correct!','Common language is still used alongside.','Definitely not for entertainment.']},
+
+// ═══════════════════════════════════
+// SECTION: INSTRUMENTS & PROCEDURES
+// ═══════════════════════════════════
+
+// — MILD —
+{t:'instruments',d:'mild',q:'What are the three categories of medical equipment used in hospitals?',
+ opts:['Surgical, Pharmaceutical, Imaging','Diagnostic, Treatment, General','Electronic, Manual, Robotic','Primary, Secondary, Tertiary'],ans:1,
+ exp:'Medical equipment in hospitals is divided into three groups: <strong>Diagnostic equipment</strong>, <strong>Treatment equipment</strong>, and <strong>General equipment</strong>.',
+ why:['These are not the correct categories.','<strong>Diagnostic, Treatment, General</strong> is correct!','Not the correct classification.','Not a medical equipment category.']},
+
+{t:'instruments',d:'mild',q:'Diagnostic equipment is used to ___.',
+ opts:['Treat disease','Identify the nature or cause of a medical condition','Perform surgery','Deliver medication'],ans:1,
+ exp:'<strong>Diagnostic equipment</strong> is a device used to identify the nature or cause of a certain medical condition.',
+ why:['Treatment equipment is for treating.','<strong>Diagnostic = identify nature/cause of condition</strong>!','Surgical instruments are for surgery.','Infusion pumps deliver medication.']},
+
+{t:'instruments',d:'mild',q:'X-ray (radiography) uses ___ to produce pictures of internal structures.',
+ opts:['Sound waves','Magnetic fields','A very small dose of ionizing radiation','Visible light'],ans:2,
+ exp:'<strong>X-ray (radiography)</strong> uses a very small dose of <strong>ionizing radiation</strong> to produce pictures of the body\'s internal structures.',
+ why:['Sound waves = ultrasound.','Magnetic fields = MRI.','<strong>X-ray uses ionizing radiation</strong>. Correct!','Visible light does not penetrate the body for imaging.']},
+
+{t:'instruments',d:'mild',q:'Fluoroscopy is a type of imaging tool that ___.',
+ opts:['Uses sound waves','Uses x-rays for real-time visualization of body structures','Uses magnetic resonance','Uses infrared light'],ans:1,
+ exp:'<strong>Fluoroscopy</strong> is a type of imaging tool that uses x-rays to allow <strong>real-time visualization</strong> of body structures.',
+ why:['Sound waves = ultrasound.','<strong>Fluoroscopy uses x-rays for real-time visualization</strong>!','Magnetic resonance = MRI.','Infrared is not used for this purpose.']},
+
+{t:'instruments',d:'mild',q:'Ultrasound probes produce and receive ___ that bounce off body tissues to create images.',
+ opts:['Light waves','X-rays','Sound waves','Magnetic pulses'],ans:2,
+ exp:'<strong>Ultrasound probes</strong> produce and receive <strong>sound waves</strong> that bounce off body tissues and create images.',
+ why:['Light waves don\'t penetrate tissues.','X-rays are used in radiography/fluoroscopy.','<strong>Ultrasound uses sound waves</strong>!','Magnetic pulses = MRI.']},
+
+{t:'instruments',d:'mild',q:'An infusion pump is a treatment device that ___.',
+ opts:['Produces images of internal organs','Measures blood pressure','Delivers fluids such as nutrients and medications into a patient\'s body','Monitors heart rhythm'],ans:2,
+ exp:'An <strong>infusion pump</strong> is a medical device that delivers fluids such as <strong>nutrients and medications</strong> into a patient\'s body in controlled amounts.',
+ why:['Imaging = diagnostic equipment.','Blood pressure uses a sphygmomanometer.','<strong>Infusion pump = delivers fluids/medications</strong>!','Heart rhythm = ECG/EKG.']},
+
+{t:'instruments',d:'mild',q:'A stethoscope is an instrument for ___.',
+ opts:['Examining the eyes','Measuring temperature','Listening to the internal sounds of the human body','Examining the ears'],ans:2,
+ exp:'A <strong>stethoscope</strong> is an instrument for listening to the internal sounds of the human body (heart, lungs, bowel sounds).',
+ why:['Eye examination = ophthalmoscope.','Temperature = thermometer.','<strong>Stethoscope = listening to body sounds</strong>!','Ear examination = otoscope.']},
+
+{t:'instruments',d:'mild',q:'An otoscope is an instrument for examining ___.',
+ opts:['The eyes','The ears','The interior of body cavities','The back of the throat'],ans:1,
+ exp:'An <strong>otoscope</strong> is an instrument for examining the ears. The procedure is called <strong>otoscopy</strong>.',
+ why:['Eye examination = ophthalmoscope.','<strong>Otoscope = examining the ears</strong>. Correct!','Body cavity interiors = endoscope.','Throat examination may use a laryngoscope.']},
+
+{t:'instruments',d:'mild',q:'An endoscope is used to examine ___.',
+ opts:['The exterior of the body','The ears','The interior of a hollow organ or cavity','Only the eyes'],ans:2,
+ exp:'An <strong>endoscope</strong> is an instrument for examining the interior of a hollow organ or cavity of the body. The procedure is <strong>endoscopy</strong>.',
+ why:['Exterior = not endoscope.','Ears = otoscope.','<strong>Endoscope = interior of hollow organ/cavity</strong>!','Eyes = ophthalmoscope.']},
+
+{t:'instruments',d:'mild',q:'An ophthalmoscope is used for examining ___.',
+ opts:['The ears','The interior of the eye','The respiratory tract','The intestines'],ans:1,
+ exp:'An <strong>ophthalmoscope</strong> is an instrument for examining the interior of the eye. The procedure is called <strong>ophthalmoscopy</strong>.',
+ why:['Ears = otoscope.','<strong>Ophthalmoscope = examining the interior of the eye</strong>!','Respiratory tract = bronchoscope.','Intestines = colonoscope/endoscope.']},
+
+// — MEDIUM —
+{t:'instruments',d:'medium',q:'The suffix "-centesis" means ___.',
+ opts:['Surgical removal','Surgical puncture to remove fluid','Creation of an opening','Surgical fixation'],ans:1,
+ exp:'<strong>-centesis</strong> = surgical puncture to remove fluid. Example: thoracentesis (chest puncture) and arthrocentesis (joint puncture).',
+ why:['-ectomy = surgical removal.','-centesis = surgical puncture to remove fluid!','-stomy = creation of an opening.','-pexy = surgical fixation.']},
+
+{t:'instruments',d:'medium',q:'Thoracentesis is defined as ___.',
+ opts:['Removal of the thoracic cage','Surgical puncture of the chest to remove fluid','Incision into the thoracic cavity','Inflammation of the thorax'],ans:1,
+ exp:'<strong>Thoracentesis</strong> = "thora" (chest) + "-centesis" (surgical puncture to remove fluid). It is a surgical puncture of the chest to remove fluid.',
+ why:['Removal would be "-ectomy."','<strong>Thoracentesis = chest puncture to remove fluid</strong>!','Incision = "-tomy."','Inflammation = "-itis."']},
+
+{t:'instruments',d:'medium',q:'The suffix "-ectomy" means ___.',
+ opts:['Incision','Creation of opening','Surgical removal/excision','Surgical repair'],ans:2,
+ exp:'<strong>-ectomy</strong> = surgical removal or excision. Examples: tonsillectomy (removal of tonsils), cholecystectomy (removal of gallbladder).',
+ why:['-tomy = incision.','-stomy = creation of opening.','<strong>-ectomy = surgical removal</strong>!','-plasty = surgical repair.']},
+
+{t:'instruments',d:'medium',q:'A cholecystectomy is the removal of the ___.',
+ opts:['Appendix','Tonsils','Gallbladder','Colon'],ans:2,
+ exp:'<strong>Cholecystectomy</strong> = "cholecyst" (gallbladder) + "-ectomy" (surgical removal). It is the removal of the <strong>gallbladder</strong>.',
+ why:['Appendix removal = appendectomy.','Tonsil removal = tonsillectomy.','<strong>Cholecystectomy = gallbladder removal</strong>!','Colon opening = colostomy.']},
+
+{t:'instruments',d:'medium',q:'The suffix "-tomy" means ___.',
+ opts:['Surgical removal','Incision (cutting into tissue)','Creation of an opening','Suture'],ans:1,
+ exp:'<strong>-tomy</strong> = incision (cutting into tissue). Examples: craniotomy, laparotomy.',
+ why:['-ectomy = surgical removal.','<strong>-tomy = incision</strong>. Correct!','-stomy = creation of opening.','-rrhaphy = suture.']},
+
+{t:'instruments',d:'medium',q:'A laparotomy is ___.',
+ opts:['A surgical repair of the stomach','An incision made to the abdominal cavity to examine abdominal organs','Removal of the large intestine','A puncture of the abdomen'],ans:1,
+ exp:'<strong>Laparotomy</strong> = "laparo" (abdomen) + "-tomy" (incision). It is an incision made to the abdominal cavity to examine abdominal organs and aid diagnosis.',
+ why:['Repair = "-plasty."','<strong>Laparotomy = abdominal incision for examination</strong>!','Removal = "-ectomy."','Puncture = "-centesis."']},
+
+{t:'instruments',d:'medium',q:'The suffix "-stomy" means ___.',
+ opts:['Surgical repair','Incision','Creation of an opening','Suture'],ans:2,
+ exp:'<strong>-stomy</strong> = creation of an opening. Example: colostomy creates an opening for the colon through the abdomen.',
+ why:['-plasty = surgical repair.','-tomy = incision.','<strong>-stomy = creation of opening</strong>!','-rrhaphy = suture.']},
+
+{t:'instruments',d:'medium',q:'A colostomy is a surgical procedure that creates ___.',
+ opts:['An incision into the colon','An opening for the colon through the abdomen','The removal of the colon','Repair of the colon'],ans:1,
+ exp:'<strong>Colostomy</strong> = "colo" (colon) + "-stomy" (creation of opening). It creates an opening for the colon or large intestine through the abdomen.',
+ why:['Incision = "-tomy."','<strong>Colostomy = opening for colon through abdomen</strong>!','Removal = "-ectomy."','Repair = "-rrhaphy" or "-plasty."']},
+
+{t:'instruments',d:'medium',q:'"-Pexy" refers to ___.',
+ opts:['Surgical removal','Incision','Surgical fixation (securing in a fixed position)','Examination procedure'],ans:2,
+ exp:'<strong>-pexy</strong> = surgical fixation (securing in a fixed position). Example: gastropexy sutures the stomach to the abdominal wall.',
+ why:['-ectomy = surgical removal.','-tomy = incision.','<strong>-pexy = surgical fixation</strong>!','-scopy = examination procedure.']},
+
+{t:'instruments',d:'medium',q:'The suffix "-rrhaphy" means ___.',
+ opts:['Incision','Suture (fusing a wound by stitches)','Creation of an opening','Puncture'],ans:1,
+ exp:'<strong>-rrhaphy</strong> = suture (fusing a wound by stitches). Example: herniorrhaphy is the surgical repair of hernia with suture of the abdominal wall.',
+ why:['-tomy = incision.','<strong>-rrhaphy = suture</strong>. Correct!','-stomy = creation of opening.','-centesis = puncture.']},
+
+{t:'instruments',d:'medium',q:'Rhinoplasty is plastic surgery of the ___.',
+ opts:['Ear','Knee','Nose','Chin'],ans:2,
+ exp:'<strong>Rhinoplasty</strong> = "rhino" (nose) + "-plasty" (surgical repair/procedure). It is plastic surgery of the nose.',
+ why:['Ear surgery would use "ot/o."','Knee = patello or genu.','<strong>Rhinoplasty = nose surgery</strong>!','Chin = mento.']},
+
+// — HARD —
+{t:'instruments',d:'hard',q:'Arthrocentesis involves surgical puncture to remove fluid from ___.',
+ opts:['The chest','The abdomen','The joints','The brain'],ans:2,
+ exp:'<strong>Arthrocentesis</strong> = "arthr/o" (joint) + "-centesis" (surgical puncture to remove fluid). It removes fluid from the <strong>joints</strong> for diagnosis or treatment.',
+ why:['Chest = thoracentesis.','Abdomen would be abdomiocentesis or paracentesis.','<strong>Arthrocentesis = joints</strong>. Correct!','Brain puncture = lumbar/spinal tap.']},
+
+{t:'instruments',d:'hard',q:'Craniotomy is defined as ___.',
+ opts:['Inflammation of the skull','Creation of an opening in the skull','Removal of part of the bone from the skull to expose the brain','Suture of the skull'],ans:2,
+ exp:'<strong>Craniotomy</strong> = "cranio" (skull) + "-tomy" (incision). It is the removal of part of the bone from the skull to expose the brain for surgical access.',
+ why:['-itis = inflammation.','That\'s closer to a "-stomy" (though not standard for skull).','<strong>Craniotomy = removal of skull bone portion to expose brain</strong>!','-rrhaphy = suture.']},
+
+{t:'instruments',d:'hard',q:'Herniorrhaphy is ___.',
+ opts:['Removal of a hernia','Puncture of a hernia','Surgical repair of hernia with suture of the abdominal wall','Creation of an opening for hernia drainage'],ans:2,
+ exp:'<strong>Herniorrhaphy</strong> = "hernio" (hernia) + "-rrhaphy" (suture). It is the surgical repair of a hernia with suture of the abdominal wall.',
+ why:['Removal = "-ectomy."','Puncture = "-centesis."','<strong>Herniorrhaphy = suture repair of hernia</strong>!','Creation of opening = "-stomy."']},
+
+{t:'instruments',d:'hard',q:'Gastropexy is a surgical operation in which the stomach is sutured to the ___.',
+ opts:['Intestine','Esophagus','Abdominal wall or diaphragm','Pelvic floor'],ans:2,
+ exp:'<strong>Gastropexy</strong> = "gastro" (stomach) + "-pexy" (surgical fixation). It is an operation in which the stomach is sutured to the <strong>abdominal wall or diaphragm</strong>.',
+ why:['Stomach is not sutured to intestine in gastropexy.','Esophagus is above the stomach.','<strong>Gastropexy = stomach sutured to abdominal wall/diaphragm</strong>!','Pelvic floor is not the target.']},
+
+{t:'instruments',d:'hard',q:'The combining form "lapar/o" means ___.',
+ opts:['Lung','Abdomen','Gallbladder','Skull'],ans:1,
+ exp:'<strong>lapar/o</strong> = abdomen. This is why "laparotomy" means an abdominal incision.',
+ why:['Lung = pneumon/o.','<strong>lapar/o = abdomen</strong>. Correct!','Gallbladder = cholecyst/o.','Skull = crani/o.']},
+
+{t:'instruments',d:'hard',q:'The combining form "cholecyst/o" means ___.',
+ opts:['Bile duct','Gallbladder','Liver','Pancreas'],ans:1,
+ exp:'<strong>cholecyst/o</strong> = gallbladder. This is why "cholecystectomy" = removal of the gallbladder.',
+ why:['Bile duct = choledoch/o.','<strong>cholecyst/o = gallbladder</strong>. Correct!','Liver = hepat/o.','Pancreas = pancreat/o.']},
+
+// ═══════════════════════════════════
+// SECTION: SPECIALTIES & SPECIALISTS
+// ═══════════════════════════════════
+
+// — MILD —
+{t:'specialties',d:'mild',q:'The suffix "-iatrics" is used to signify a ___.',
+ opts:['Specialist in a field','Medical specialty','Study of a subject','Surgical procedure'],ans:1,
+ exp:'<strong>-iatrics</strong> is a suffix used to signify a <strong>medical specialty</strong>. Examples: pediatrics, geriatrics, obstetrics.',
+ why:['-ist or -ician or -logist denotes a specialist.','<strong>-iatrics = medical specialty</strong>. Correct!','-logy = study of.','-ectomy/-tomy = surgical procedures.']},
+
+{t:'specialties',d:'mild',q:'Pediatrics is the area of medical practice that treats ___.',
+ opts:['Older patients','Patients with cancer','Health conditions in babies, children, and teenagers','Patients with mental health conditions'],ans:2,
+ exp:'<strong>Pediatrics</strong> (ped/o = child + -iatrics) is the area of medical practice that treats health conditions in babies, children, and teenagers.',
+ why:['Older patients = geriatrics.','Cancer = oncology.','<strong>Pediatrics treats children and teenagers</strong>!','Mental health = psychiatry.']},
+
+{t:'specialties',d:'mild',q:'Geriatrics is the area of medical practice that treats ___.',
+ opts:['Children','Patients with heart disease','Health conditions related to ageing','Patients with skin conditions'],ans:2,
+ exp:'<strong>Geriatrics</strong> (ger/o = old age + -iatrics) is the area of medical practice that treats health conditions related to <strong>ageing</strong>.',
+ why:['Children = pediatrics.','Heart disease = cardiology.','<strong>Geriatrics = ageing/elderly patients</strong>!','Skin = dermatology.']},
+
+{t:'specialties',d:'mild',q:'Psychiatry is the area of medical practice that treats ___.',
+ opts:['Heart conditions','Bone diseases','People with mental health conditions','Eye conditions'],ans:2,
+ exp:'<strong>Psychiatry</strong> (psych/o = mind + -iatry) is the area of medical practice that treats people with <strong>mental health conditions</strong>.',
+ why:['Heart = cardiology.','Bones = orthopedics.','<strong>Psychiatry = mental health</strong>!','Eyes = ophthalmology.']},
+
+{t:'specialties',d:'mild',q:'Neurology is the area of medical practice that treats health conditions involving ___.',
+ opts:['The kidneys','The skin','The brain, spinal cord, or nerves','The digestive organs'],ans:2,
+ exp:'<strong>Neurology</strong> (neur/o = nerve + -logy = study of) treats health conditions involving the <strong>brain, spinal cord, or nerves</strong>.',
+ why:['Kidneys = nephrology.','Skin = dermatology.','<strong>Neurology = brain, spinal cord, nerves</strong>!','Digestive = gastroenterology.']},
+
+{t:'specialties',d:'mild',q:'Ophthalmology is the area of medical practice that treats ___.',
+ opts:['The ears','Bones and joints','The eye','The reproductive system'],ans:2,
+ exp:'<strong>Ophthalmology</strong> (ophthalm/o = eye + -logy) is the area of practice treating health conditions involving <strong>the eye</strong>.',
+ why:['Ears = otolaryngology.','Bones/joints = orthopedics/rheumatology.','<strong>Ophthalmology = eye conditions</strong>!','Reproductive system = obstetrics/gynecology.']},
+
+{t:'specialties',d:'mild',q:'Cardiology is the area of medical practice that treats ___.',
+ opts:['Blood disorders','Heart conditions','Kidney diseases','Nerve disorders'],ans:1,
+ exp:'<strong>Cardiology</strong> (cardi/o = heart + -logy) is the area of medical practice that treats people with <strong>heart conditions</strong>.',
+ why:['Blood = hematology.','<strong>Cardiology = heart</strong>. Correct!','Kidneys = nephrology.','Nerves = neurology.']},
+
+{t:'specialties',d:'mild',q:'Dermatology is the area of medical practice that treats ___.',
+ opts:['Blood diseases','Cancer','Health conditions of the skin, hair, or nails','Kidney diseases'],ans:2,
+ exp:'<strong>Dermatology</strong> (derm/o = skin + -logy) treats health conditions of the <strong>skin, hair, or nails</strong>.',
+ why:['Blood = hematology.','Cancer = oncology.','<strong>Dermatology = skin, hair, nails</strong>!','Kidneys = nephrology.']},
+
+{t:'specialties',d:'mild',q:'A psychiatrist is a doctor that ___.',
+ opts:['Diagnoses and treats heart conditions','Diagnoses and treats mental, emotional, and behavioral disorders','Specializes in eye surgery','Treats bone diseases'],ans:1,
+ exp:'A <strong>psychiatrist</strong> (suffix "-ist" = specialist) is a doctor that diagnoses and treats <strong>mental, emotional, and behavioral disorders</strong>.',
+ why:['Heart = cardiologist.','<strong>Psychiatrist = mental/emotional disorders</strong>!','Eye surgery = ophthalmologist.','Bones = orthopedist.']},
+
+{t:'specialties',d:'mild',q:'A pediatrician manages the care for children from birth until age ___.',
+ opts:['12','16','18','21'],ans:2,
+ exp:'A <strong>pediatrician</strong> manages the physical, behavioral, and mental care for children from birth until age <strong>18</strong>.',
+ why:['12 is too young a cutoff.','16 is not the standard.','<strong>Birth to age 18</strong>. Correct!','21 is beyond the pediatric cutoff.']},
+
+{t:'specialties',d:'mild',q:'A geriatrician specializes in treating older patients, especially from age ___.',
+ opts:['50 and up','60 and up','65 and up','70 and up'],ans:2,
+ exp:'A <strong>geriatrician</strong> is a doctor specialized in treating older patients, especially from the ages <strong>65 and up</strong>.',
+ why:['50 is not the standard age threshold.','60 is not the standard.','<strong>65 and up</strong> is correct!','70 is too late as a starting point.']},
+
+{t:'specialties',d:'mild',q:'Oncology is the area of medical practice that uses medicines including ___ to treat cancer.',
+ opts:['Antibiotics','Antifungals','Chemotherapy','Steroids'],ans:2,
+ exp:'<strong>Oncology</strong> (onc/o = tumor + -logy) uses medicines including <strong>chemotherapy</strong> to treat people with cancer.',
+ why:['Antibiotics treat infections.','Antifungals treat fungal infections.','<strong>Oncology uses chemotherapy</strong>!','Steroids are used in various conditions but chemotherapy is the key oncology treatment.']},
+
+// — MEDIUM —
+{t:'specialties',d:'medium',q:'The suffix "-logy" means ___.',
+ opts:['Medical specialist','Surgical procedure','Study of','Medical specialty'],ans:2,
+ exp:'<strong>-logy</strong> means "study of." When used in medical specialties, it indicates a field that studies a particular subject (e.g., cardiology = study of the heart).',
+ why:['-ist/-ician/-logist = specialist.','-ectomy/-tomy/-plasty = surgical procedures.','<strong>-logy = study of</strong>. Correct!','-iatrics/-iatry/-ics = medical specialty.']},
+
+{t:'specialties',d:'medium',q:'Rheumatology is the area of medical practice that treats ___.',
+ opts:['Kidney conditions','Heart conditions','Health conditions affecting the muscles and joints','Skin conditions'],ans:2,
+ exp:'<strong>Rheumatology</strong> (rheumat/o = flow/fluid + -logy) treats health conditions that <strong>affect the muscles and joints</strong>, such as arthritis and lupus.',
+ why:['Kidneys = nephrology.','Heart = cardiology.','<strong>Rheumatology = muscles and joints</strong>!','Skin = dermatology.']},
+
+{t:'specialties',d:'medium',q:'Nephrology is the area of practice that treats health conditions of the ___.',
+ opts:['Liver','Kidneys','Lungs','Bladder'],ans:1,
+ exp:'<strong>Nephrology</strong> (nephr/o = kidney + -logy) is the area of medical practice that treats health conditions of the <strong>kidneys</strong>.',
+ why:['Liver = hepatology.','<strong>Nephrology = kidneys</strong>. Correct!','Lungs = pulmonology.','Bladder = urology.']},
+
+{t:'specialties',d:'medium',q:'Urology manages conditions of the kidneys, bladder, and urinary tract. It also manages ___.',
+ opts:['Female reproductive health','Male reproductive health','Skin conditions','Blood disorders'],ans:1,
+ exp:'<strong>Urology</strong> (ur/o = urinary tract + -logy) treats conditions of the kidneys, bladder, and urinary tract. It also manages <strong>male reproductive health</strong> conditions.',
+ why:['Female reproductive health = gynecology/obstetrics.','<strong>Urology also manages male reproductive health</strong>!','Skin = dermatology.','Blood = hematology.']},
+
+{t:'specialties',d:'medium',q:'Pathology is the area of practice that ___.',
+ opts:['Treats cancer','Uses different tests to help diagnose the cause of a disease','Treats blood disorders','Manages pregnancy'],ans:1,
+ exp:'<strong>Pathology</strong> (path/o = disease + -logy) uses different tests to help <strong>diagnose the cause of a disease</strong> by examining tissues and specimens.',
+ why:['Cancer = oncology.','<strong>Pathology = diagnosing cause of disease through testing</strong>!','Blood = hematology.','Pregnancy = obstetrics.']},
+
+{t:'specialties',d:'medium',q:'Which suffix is used to signify medical specialists along with "-ist" and "-logist"?',
+ opts:['-iatry','-ician','-logy','-ics'],ans:1,
+ exp:'The three suffixes used to signify medical <strong>specialists</strong> are: <strong>-ist</strong>, <strong>-ician</strong>, and <strong>-logist</strong>.',
+ why:['-iatry signifies a medical specialty, not a specialist.','-ician is one of the three specialist suffixes!','-logy = study of/specialty.','-ics = medical specialty.']},
+
+{t:'specialties',d:'medium',q:'An obstetrician is a doctor specialized in ___.',
+ opts:['Cancer treatment','Childbirth, pregnancy, and a woman\'s reproductive system','Treating elderly patients','Eye and vision care'],ans:1,
+ exp:'An <strong>obstetrician</strong> (obstetr/o = midwife + "-ician") is a doctor specialized in <strong>pregnancy, childbirth, and a woman\'s reproductive system</strong>.',
+ why:['Cancer = oncologist.','<strong>Obstetrician = pregnancy, childbirth, female reproductive system</strong>!','Elderly = geriatrician.','Eye/vision = ophthalmologist.']},
+
+{t:'specialties',d:'medium',q:'An oncologist is a doctor who ___.',
+ opts:['Examines body tissues','Treats cancer and provides medical treatment for a person diagnosed with cancer','Diagnoses kidney conditions','Specializes in ear, nose, and throat'],ans:1,
+ exp:'An <strong>oncologist</strong> (onc/o = tumor + "-logist") is a doctor who <strong>treats cancer</strong> and provides medical treatment for a person diagnosed with cancer.',
+ why:['Body tissue examination = pathologist.','<strong>Oncologist = cancer treatment</strong>!','Kidneys = nephrologist.','ENT = otolaryngologist.']},
+
+{t:'specialties',d:'medium',q:'An otolaryngologist is a doctor that specializes in conditions affecting ___.',
+ opts:['The urinary system','The ears, nose, and throat including head and neck surgery','Blood disorders','Bone diseases'],ans:1,
+ exp:'An <strong>otolaryngologist</strong> specializes in treating conditions that affect the <strong>ears, nose, and throat</strong>, including head and neck surgery (ENT specialist).',
+ why:['Urinary system = urologist.','<strong>Otolaryngologist = ENT</strong>!','Blood disorders = hematologist.','Bones = orthopedist.']},
+
+{t:'specialties',d:'medium',q:'Endocrinology is the area of practice that treats health conditions ___.',
+ opts:['Of the nervous system','With a hormonal cause','Of the urinary tract','Of the blood'],ans:1,
+ exp:'<strong>Endocrinology</strong> (endocrin/o = endocrine glands + -logy) treats health conditions <strong>with a hormonal cause</strong>, involving the endocrine glands.',
+ why:['Nervous system = neurology.','<strong>Endocrinology = hormonal conditions</strong>!','Urinary tract = urology.','Blood = hematology.']},
+
+{t:'specialties',d:'medium',q:'Hematology is the area of practice that treats ___.',
+ opts:['Digestive conditions','Bone conditions','Blood-related health conditions','Nerve conditions'],ans:2,
+ exp:'<strong>Hematology</strong> (hem/o or hemat/o = blood + -logy) is the area of medical practice that treats <strong>blood-related health conditions</strong>.',
+ why:['Digestive = gastroenterology.','Bones = orthopedics.','<strong>Hematology = blood conditions</strong>!','Nerves = neurology.']},
+
+{t:'specialties',d:'medium',q:'Diagnostic radiology is the area of practice that ___.',
+ opts:['Administers chemotherapy','Uses imaging to diagnose illness or injury','Treats mental health disorders','Performs joint replacements'],ans:1,
+ exp:'<strong>Diagnostic Radiology</strong> (radi/o = x-ray + -logy) is the area of medical practice that uses <strong>imaging to diagnose illness or injury</strong>.',
+ why:['Chemotherapy = oncology.','<strong>Diagnostic radiology = imaging for diagnosis</strong>!','Mental health = psychiatry.','Joint replacement = orthopedics/arthroplasty.']},
+
+// — HARD —
+{t:'specialties',d:'hard',q:'The combining form "psych/o" means ___.',
+ opts:['Nerve','Child','Mind','Old age'],ans:2,
+ exp:'<strong>psych/o</strong> = mind. This root is used in "psychiatry" (treatment of the mind) and "psychologist."',
+ why:['Nerve = neur/o.','Child = ped/o.','<strong>psych/o = mind</strong>. Correct!','Old age = ger/o.']},
+
+{t:'specialties',d:'hard',q:'The combining form "ger/o" means ___.',
+ opts:['Kidney','Skin','Old age','Stomach'],ans:2,
+ exp:'<strong>ger/o</strong> = old age. This is the root in "geriatrics" and "geriatrician."',
+ why:['Kidney = nephr/o.','Skin = derm/o or dermat/o.','<strong>ger/o = old age</strong>. Correct!','Stomach = gastr/o.']},
+
+{t:'specialties',d:'hard',q:'The combining form "endocrin/o" refers to ___.',
+ opts:['Blood vessels','Endocrine glands','The kidneys','The nerves'],ans:1,
+ exp:'<strong>endocrin/o</strong> = endocrine glands. Used in "endocrinology" and "endocrinologist."',
+ why:['Blood vessels = angi/o or arteri/o.','<strong>endocrin/o = endocrine glands</strong>. Correct!','Kidneys = nephr/o.','Nerves = neur/o.']},
+
+{t:'specialties',d:'hard',q:'An anesthesiologist is a doctor specialized in ___.',
+ opts:['Diagnosing injuries using imaging','Administering anesthesia during procedures or surgery','Treating mental disorders','Managing blood disorders'],ans:1,
+ exp:'An <strong>anesthesiologist</strong> (esthesi/o = sensation + "-logist") is a doctor specialized in <strong>administering anesthesia</strong> during procedures or surgery.',
+ why:['Imaging diagnosis = radiologist.','<strong>Anesthesiologist = anesthesia administration</strong>!','Mental = psychiatrist.','Blood = hematologist.']},
+
+{t:'specialties',d:'hard',q:'A nephrologist is a doctor specialized in diagnosing and treating ___.',
+ opts:['Liver conditions','Kidney conditions','Lung conditions','Nerve conditions'],ans:1,
+ exp:'A <strong>nephrologist</strong> (nephr/o = kidney + "-logist") is a doctor specialized in diagnosing and treating <strong>kidney conditions</strong>.',
+ why:['Liver = hepatologist.','<strong>Nephrologist = kidney specialist</strong>!','Lungs = pulmonologist.','Nerves = neurologist.']},
+
+{t:'specialties',d:'hard',q:'A radiologist specializes in using which types of imaging? Select the most complete answer.',
+ opts:['Only X-rays','X-rays and ultrasound only','X-rays, CT, MRI, and ultrasound','Only MRI and CT'],ans:2,
+ exp:'A <strong>radiologist</strong> specializes in diagnosing and treating injuries/diseases using medical imaging procedures including <strong>X-rays, CT, MRI, and ultrasound</strong>.',
+ why:['Only X-rays is too limited.','X-rays and ultrasound is incomplete.','<strong>X-rays, CT, MRI, and ultrasound</strong> — all four are correct!','Excluding X-rays is wrong.']},
+
+{t:'specialties',d:'hard',q:'The combining form "obstetr/o" means ___.',
+ opts:['Child','Old age','Midwife','Sensation'],ans:2,
+ exp:'<strong>obstetr/o</strong> = midwife. This root forms "obstetrics" and "obstetrician" — the specialty dealing with pregnancy and childbirth.',
+ why:['Child = ped/o.','Old age = ger/o.','<strong>obstetr/o = midwife</strong>. Correct!','Sensation = esthesi/o.']},
+
+{t:'specialties',d:'hard',q:'Gastroenterology and Hepatology treat health conditions involving ___.',
+ opts:['The heart and blood vessels','The digestive organs, including the liver','The kidneys and urinary tract','The lungs and respiratory system'],ans:1,
+ exp:'<strong>Gastroenterology and Hepatology</strong> (gastr/o = stomach, enter/o = intestines, hepat/o = liver) treat health conditions involving the <strong>digestive organs, including the liver</strong>.',
+ why:['Heart/blood vessels = cardiology/vascular surgery.','<strong>Digestive organs including liver</strong>. Correct!','Kidneys/urinary = nephrology/urology.','Lungs/respiratory = pulmonology.']},
+
+{t:'specialties',d:'hard',q:'An immunologist specializes in treating and managing ___.',
+ opts:['Blood cancers','Allergies, asthma, and other immune system disorders','Eye diseases','Liver diseases'],ans:1,
+ exp:'An <strong>immunologist</strong> (immun/o = immune system + "-logist") specializes in treating and managing <strong>allergies, asthma, and other immune system disorders</strong>.',
+ why:['Blood cancers = hematologist/oncologist.','<strong>Immunologist = allergies, asthma, immune disorders</strong>!','Eye = ophthalmologist.','Liver = hepatologist.']},
+
+{t:'specialties',d:'hard',q:'Podiatry is a branch of medicine devoted to the study and treatment of disorders of the ___.',
+ opts:['Hand, wrist, and elbow','Foot, ankle, and lower extremity','Spine and vertebrae','Shoulder and upper extremity'],ans:1,
+ exp:'<strong>Podiatry</strong> (pod/o = foot + -iatry) is devoted to the study, diagnosis, and treatment of disorders of the <strong>foot, ankle, and lower extremity</strong>.',
+ why:['Hand/wrist = hand surgery specialty.','<strong>Podiatry = foot, ankle, lower extremity</strong>!','Spine = orthopedics/neurosurgery.','Shoulder = orthopedics/sports medicine.']},
+
+// ═══════════════════════════════════
+// MIXED / CROSSOVER QUESTIONS
+// ═══════════════════════════════════
+
+{t:'skeletal',d:'hard',q:'The term "sternal" refers to the sternum, and uses which suffix meaning "referring to"?',
+ opts:['-itis','-plasty','-al','-ectomy'],ans:2,
+ exp:'<strong>Sternal</strong> = root "stern" (sternum/breastbone) + suffix <strong>"-al"</strong> (referring to/pertaining to). This suffix is very common in anatomical terms.',
+ why:['-itis = inflammation.','-plasty = surgical repair.','<strong>-al = referring to/pertaining to</strong>. Correct!','-ectomy = surgical removal.']},
+
+{t:'skeletal',d:'hard',q:'The term "vertebral" in "vertebral column" means ___.',
+ opts:['Referring to the vertebrae and backbone','Surgical removal of vertebrae','Inflammation of the vertebrae','A puncture of the vertebrae'],ans:0,
+ exp:'<strong>Vertebral</strong> = root "vertebr" (vertebra) + suffix "-al" (referring to). It means <strong>referring to the vertebrae</strong>. The vertebral column consists of 33 vertebrae.',
+ why:['<strong>Vertebral = referring to vertebrae</strong>. Correct!','-ectomy would be removal.','-itis would be inflammation.','-centesis would be puncture.']},
+
+{t:'anatomy',d:'hard',q:'The pleural cavities within the thoracic cavity contain ___.',
+ opts:['The heart and great vessels','The lungs','The esophagus and trachea','The liver'],ans:1,
+ exp:'Within the thoracic cavity, the <strong>pleural cavities</strong> contain the <strong>lungs</strong>. The pericardial cavity contains the heart and great vessels. The mediastinum contains the trachea and esophagus.',
+ why:['Heart and great vessels = pericardial cavity.','<strong>Pleural cavities = lungs</strong>!','Esophagus/trachea = mediastinum.','Liver = abdominal cavity.']},
+
+{t:'anatomy',d:'hard',q:'The mediastinum (within the thoracic cavity) contains ___.',
+ opts:['The lungs','The kidneys','The trachea and esophagus','The stomach'],ans:2,
+ exp:'The <strong>mediastinum</strong> is the central region of the thoracic cavity. It contains the <strong>trachea and esophagus</strong>. The pericardial cavity (within it) contains the heart.',
+ why:['Lungs = pleural cavities.','Kidneys = abdominal/retroperitoneal.','<strong>Mediastinum = trachea and esophagus</strong>!','Stomach = abdominal cavity.']},
+
+{t:'instruments',d:'hard',q:'Which combining form means "spinal cord"?',
+ opts:['neur/o','myel/o','oste/o','psych/o'],ans:1,
+ exp:'<strong>myel/o</strong> = spinal cord (also bone marrow in some contexts). <strong>neur/o</strong> = nerve/nerve tissue.',
+ why:['neur/o = nerve/nerve tissue.','<strong>myel/o = spinal cord</strong>. Correct!','oste/o = bone.','psych/o = mind.']},
+
+{t:'instruments',d:'hard',q:'The combining form "pneumon/o" means ___.',
+ opts:['Bone','Lung','Skin','Blood'],ans:1,
+ exp:'<strong>pneumon/o</strong> = lung. This root is used in "pneumonia" (lung infection) and other pulmonary terms.',
+ why:['Bone = oste/o.','<strong>pneumon/o = lung</strong>. Correct!','Skin = derm/o.','Blood = hem/o or hemat/o.']},
+
+{t:'specialties',d:'hard',q:'The combining form "xanth/o" means ___.',
+ opts:['Stomach','Black','Yellow','White'],ans:2,
+ exp:'<strong>xanth/o</strong> = yellow. This is used in medical terms like "xanthoderma" (yellow skin) which can indicate conditions like jaundice.',
+ why:['Stomach = gastr/o.','Black = melan/o.','<strong>xanth/o = yellow</strong>. Correct!','White = leuk/o.']},
+
+{t:'instruments',d:'hard',q:'The combining form "angi/o" means ___.',
+ opts:['Artery','Vein','Vessel','Nerve'],ans:2,
+ exp:'<strong>angi/o</strong> = vessel (blood vessel). Note that "arteri/o" specifically means artery.',
+ why:['Artery specifically = arteri/o.','Vein = phleb/o or ven/o.','<strong>angi/o = vessel</strong>. Correct!','Nerve = neur/o.']},
+
+{t:'instruments',d:'hard',q:'The combining form "tonsill/o" means ___.',
+ opts:['Throat','Tongue','Tonsils','Thyroid'],ans:2,
+ exp:'<strong>tonsill/o</strong> = tonsils. This is why "tonsillectomy" = removal of the tonsils.',
+ why:['Throat = pharyng/o.','Tongue = gloss/o or lingu/o.','<strong>tonsill/o = tonsils</strong>. Correct!','Thyroid = thyroid/o.']},
+
+{t:'instruments',d:'medium',q:'Otoscopy is described as ___.',
+ opts:['A surgical procedure on the ears','A clinical procedure used to examine the structures of the ears','An imaging test using x-rays','A procedure to remove fluid from the ear'],ans:1,
+ exp:'<strong>Otoscopy</strong> is a clinical procedure used to examine the structures of the ears. The instrument used is the otoscope.',
+ why:['It is an examination, not surgery.','<strong>Otoscopy = clinical examination of ear structures</strong>!','No x-rays are used.','Fluid removal = myringotomy or ear drainage.']},
+
+{t:'anatomy',d:'medium',q:'Which example correctly demonstrates the use of "proximal"?',
+ opts:['The fingers are proximal to the elbow','The elbow is proximal to the wrist','The knee is proximal to the hip','The ankle is proximal to the foot'],ans:1,
+ exp:'<strong>Proximal</strong> means closer to the trunk/point of attachment. The <strong>elbow is proximal to the wrist</strong> because the elbow is closer to the shoulder (trunk).',
+ why:['Fingers are distal, not proximal, to the elbow.','<strong>Elbow is proximal to the wrist</strong>. Correct!','The hip is proximal to the knee, not the other way.','The foot is distal to the ankle.']},
+
+{t:'anatomy',d:'medium',q:'The wrist is distal to the shoulder. This means the wrist is ___.',
+ opts:['Closer to the shoulder than the elbow','Farther from the shoulder than the elbow','At the same level as the shoulder','Above the shoulder'],ans:1,
+ exp:'"Distal" means <strong>far from the point of attachment</strong>. The wrist being distal to the shoulder means it is <strong>farther from the shoulder</strong> than the elbow.',
+ why:['Closer = proximal.','<strong>Distal = farther from the shoulder</strong>. Correct!','Same level would be neither proximal nor distal.','Above = superior.']},
+
+{t:'skeletal',d:'medium',q:'The clavicle connects the ___ to the scapula.',
+ opts:['Humerus','Sternum','Rib cage','Vertebral column'],ans:1,
+ exp:'The <strong>clavicle</strong> (collarbone) connects the <strong>sternum</strong> (breastbone) to the <strong>scapula</strong> (shoulder blade).',
+ why:['The humerus connects at the shoulder joint.','<strong>Clavicle connects sternum to scapula</strong>!','Rib cage is separate from the clavicle.','The vertebral column is posterior/axial.']},
+
+{t:'skeletal',d:'hard',q:'Short bones are characterized by being ___.',
+ opts:['Longer than they are wide','Thin and flattened','Around the same height and width','Small and rounded like stones'],ans:2,
+ exp:'<strong>Short bones</strong> are usually around the <strong>same height and width</strong>. Examples include tarsals and carpals.',
+ why:['Longer than wide = long bones.','Thin and flat = flat bones.','<strong>Short bones = same height and width</strong>. Correct!','Small and rounded = sesamoid bones.']},
+
+{t:'skeletal',d:'medium',q:'The lumbar vertebrae are located in the ___.',
+ opts:['Neck','Chest','Lower back','Pelvis'],ans:2,
+ exp:'The 5 <strong>lumbar</strong> vertebrae are located in the <strong>lower back</strong> region — the largest individual vertebrae in the spine.',
+ why:['Neck = cervical (7).','Chest = thoracic (12).','<strong>Lumbar = lower back</strong>. Correct!','Pelvis = sacrum and coccyx region.']},
+
+{t:'skeletal',d:'medium',q:'How many metacarpal bones are in the hand?',
+ opts:['4','5','7','8'],ans:1,
+ exp:'There are <strong>5 metacarpal bones</strong> in the hand — one for each finger, connecting the carpals to the phalanges.',
+ why:['4 is one too few.','<strong>5 metacarpal bones</strong>. Correct!','7 is the number of tarsal bones.','8 is the number of carpal bones.']},
+
+{t:'skeletal',d:'medium',q:'How many carpal bones are in the wrist?',
+ opts:['5','6','7','8'],ans:3,
+ exp:'The wrist consists of <strong>8 small carpal bones</strong>.',
+ why:['5 = metacarpal bones.','6 is too few.','7 = tarsal bones.','<strong>8 carpal bones</strong>. Correct!']},
+
+{t:'skeletal',d:'medium',q:'The femoral artery is described as ___.',
+ opts:['A vein in the arm','A large artery in the thigh, the main arterial supply to the thigh and leg','An artery in the neck','The main heart artery'],ans:1,
+ exp:'The <strong>femoral artery</strong> is a large artery in the thigh and the main arterial supply to the thigh and leg. "Femoral" = referring to the femur.',
+ why:['Not a vein, and not in the arm.','<strong>Femoral artery = large artery in the thigh</strong>!','Neck artery = carotid.','Main heart artery = aorta.']},
+
+{t:'specialties',d:'medium',q:'Anaesthesiology is the area of practice that manages ___.',
+ opts:['Cancer chemotherapy','Blood disorders','Pain and awareness before, during and after surgery','Kidney replacement therapy'],ans:2,
+ exp:'<strong>Anaesthesiology</strong> (esthesi/o = sensation + -logy) is the area of medical practice that manages <strong>pain and awareness before, during and after surgery</strong>.',
+ why:['Cancer chemotherapy = oncology.','Blood = hematology.','<strong>Anaesthesiology = pain/awareness management in surgery</strong>!','Kidney = nephrology/dialysis.']},
+
+{t:'specialties',d:'medium',q:'A neurologist treats diseases of the brain, spinal cord, and ___.',
+ opts:['The joints','The kidneys','Peripheral nerves','The skin'],ans:2,
+ exp:'A <strong>neurologist</strong> (neur/o = nerve + "-logist") treats diseases of the <strong>brain, spinal cord, and peripheral nerves</strong>.',
+ why:['Joints = rheumatologist/orthopedist.','Kidneys = nephrologist.','<strong>Neurologist = brain, spinal cord, peripheral nerves</strong>!','Skin = dermatologist.']},
+
+{t:'specialties',d:'hard',q:'The combining form "rheumat/o" literally means ___.',
+ opts:['Muscle','Joint','Flow, fluid','Inflammation'],ans:2,
+ exp:'<strong>rheumat/o</strong> literally means "flow, fluid." Historically it referred to the flowing of bodily humors — now used to describe the specialty treating musculoskeletal/inflammatory conditions.',
+ why:['Muscle = my/o.','Joint = arthr/o.','<strong>rheumat/o = flow, fluid</strong>. Correct!','Inflammation is described by "-itis."']},
+
+{t:'specialties',d:'hard',q:'The combining form "append/o" means ___.',
+ opts:['Appendicular skeleton','Appendix','Abdominal cavity','Attachment point'],ans:1,
+ exp:'<strong>append/o</strong> = appendix (the vermiform appendix of the large intestine). Used in "appendectomy" (removal of the appendix).',
+ why:['Appendicular relates to anatomy but append/o specifically = appendix.','<strong>append/o = appendix</strong>. Correct!','Abdominal = abdomin/o.','Attachment point is the anatomical meaning, not the combining form meaning.']},
+
+{t:'instruments',d:'medium',q:'A tonsillectomy is the removal (excision) of the ___.',
+ opts:['Thyroid gland','Gallbladder','Tonsils','Appendix'],ans:2,
+ exp:'<strong>Tonsillectomy</strong> = "tonsill" (tonsils) + "-ectomy" (surgical removal). It is the removal of the <strong>tonsils</strong>.',
+ why:['Thyroid removal = thyroidectomy.','Gallbladder = cholecystectomy.','<strong>Tonsillectomy = removal of tonsils</strong>!','Appendix = appendectomy.']},
+
+{t:'anatomy',d:'hard',q:'If a structure is described as "lateral to the spine," where is it located?',
+ opts:['Closer to the spine than the reference point','Below the spine','Away from the midline/spine','Above the spine'],ans:2,
+ exp:'"Lateral" means <strong>away from the midline</strong>. A structure lateral to the spine is located away from the central axis of the body.',
+ why:['Closer to midline = medial.','Below = inferior.','<strong>Lateral = away from the midline</strong>. Correct!','Above = superior.']},
+
+{t:'anatomy',d:'hard',q:'In the body cavity diagram, which cavity is in the FRONT of the body?',
+ opts:['Dorsal cavity','Ventral cavity','Cranial cavity','Spinal cavity'],ans:1,
+ exp:'The <strong>ventral cavity</strong> is the cavity in the FRONT of the body. "Ventral" = front/belly side. It contains the thoracic and abdominopelvic cavities.',
+ why:['Dorsal cavity = back of the body.','<strong>Ventral cavity = front of the body</strong>!','Cranial = within the skull (part of dorsal).','Spinal = within vertebral column (part of dorsal).']},
+
+{t:'skeletal',d:'hard',q:'The suffix "-ular" in "articular" indicates ___.',
+ opts:['Inflammation','Surgical procedure','Referring to','Study of'],ans:2,
+ exp:'The suffix <strong>"-ar"</strong> (or "-ular") means <strong>referring to</strong>. Articular = articul (joint) + -ar (referring to) = referring to joints.',
+ why:['-itis = inflammation.','-ectomy/-tomy/-plasty = surgical procedures.','<strong>-ar/-ular = referring to</strong>. Correct!','-logy = study of.']},
+
+{t:'skeletal',d:'medium',q:'The clavicle is classified as which type of bone?',
+ opts:['Short bone','Flat bone','Long bone','Irregular bone'],ans:2,
+ exp:'The <strong>clavicle</strong> is classified as a <strong>long bone</strong> — it is longer than it is wide, connecting the sternum to the scapula.',
+ why:['Short bones are equal in height and width (e.g., carpals).','Flat bones are thin (e.g., sternum, skull).','<strong>Clavicle = long bone</strong>. Correct!','Irregular bones have complex shapes (e.g., vertebrae).']},
+
+{t:'skeletal',d:'medium',q:'The scapula is classified as which type of bone?',
+ opts:['Long bone','Short bone','Flat bone','Sesamoid bone'],ans:2,
+ exp:'The <strong>scapula</strong> (shoulder blade) is classified as a <strong>flat bone</strong> — it is thin and flattened, similar to the sternum and skull.',
+ why:['Long bones are longer than wide (e.g., humerus).','Short bones are equal in dimension.','<strong>Scapula = flat bone</strong>. Correct!','Sesamoid bones are small and rounded (e.g., patella).']},
+
+{t:'anatomy',d:'medium',q:'Which body plane would a surgeon use to describe dividing an organ into upper and lower halves?',
+ opts:['Sagittal plane','Frontal (coronal) plane','Transverse (axial) plane','Oblique plane'],ans:2,
+ exp:'The <strong>transverse (axial/horizontal) plane</strong> divides the body — or an organ — into <strong>superior (upper) and inferior (lower)</strong> portions.',
+ why:['Sagittal = left and right.','Frontal/coronal = front and back.','<strong>Transverse = upper and lower</strong>. Correct!','Oblique = 45° angle.']},
+
+{t:'instruments',d:'medium',q:'Ophthalmoscopy is an examination of ___.',
+ opts:['The front of the eye only','The back part of the eye','The entire body','The ears'],ans:1,
+ exp:'<strong>Ophthalmoscopy</strong> is a clinical examination of the <strong>back part of the eye</strong> (retina, optic disc, blood vessels). It uses an ophthalmoscope.',
+ why:['The front = slit-lamp examination.','<strong>Ophthalmoscopy = back part of the eye</strong>!','Not a whole-body exam.','Ears = otoscopy.']},
+
+{t:'specialties',d:'hard',q:'Which combining form means "sensation"?',
+ opts:['psych/o','esthesi/o','neur/o','somat/o'],ans:1,
+ exp:'<strong>esthesi/o</strong> = sensation. This is used in "anaesthesiology" — the study/practice of managing sensation/pain.',
+ why:['psych/o = mind.','<strong>esthesi/o = sensation</strong>. Correct!','neur/o = nerve/nerve tissue.','somat/o = body.']},
+
+{t:'skeletal',d:'hard',q:'The femoral artery is named because it runs along the ___.',
+ opts:['Tibia','Fibula','Femur','Patella'],ans:2,
+ exp:'The femoral artery is named after the <strong>femur</strong> (thighbone). "Femoral" = femor (femur) + -al (referring to), so it means "referring to/of the femur."',
+ why:['Tibial artery = refers to tibia.','Fibular/peroneal artery = near fibula.','<strong>Femoral = of/referring to the femur</strong>!','Patella is the kneecap — not an artery location.']},
+
+{t:'anatomy',d:'medium',q:'The "superior" direction uses which root to indicate "above"?',
+ opts:['Infer','Poster','Super','Medi'],ans:2,
+ exp:'"<strong>Super</strong>" means above. <strong>Superior</strong> = super (above) + -ior (pertaining to) = pertaining to above/uppermost.',
+ why:['Infer = below (inferior).','Poster = back (posterior).','<strong>Super = above (superior)</strong>. Correct!','Medi = toward/middle (medial).']},
+
+{t:'instruments',d:'hard',q:'The combining form "hem/o" or "hemat/o" means ___.',
+ opts:['Liver','Bone marrow','Blood','Heart'],ans:2,
+ exp:'<strong>hem/o or hemat/o</strong> = blood. Used in hematology (study of blood), hematologist (blood specialist).',
+ why:['Liver = hepat/o.','Bone marrow can use myel/o but hem/o specifically = blood.','<strong>hem/o / hemat/o = blood</strong>. Correct!','Heart = cardi/o.']},
+
+{t:'instruments',d:'hard',q:'Endoscopy is described as ___.',
+ opts:['An x-ray of a body cavity','A procedure used in medicine to look inside the body','Surgical removal of an organ','A suture technique'],ans:1,
+ exp:'<strong>Endoscopy</strong> (endo = within + -scopy = visual examination) is a procedure used in medicine to <strong>look inside the body</strong> using an endoscope.',
+ why:['X-ray = radiography.','<strong>Endoscopy = looking inside the body</strong>!','Surgical removal = "-ectomy."','Suture = "-rrhaphy."']},
+
+];
+
+// ── State ──
+let answeredCount = 0, scoreCount = 0;
+let topicFilter = 'all', diffFilter = 'all';
+
+function buildCards() {
+  const grid = document.getElementById('quizGrid');
+  grid.innerHTML = '';
+  document.getElementById('totalCount').textContent = ALL_QUESTIONS.length;
+  updateStats();
+
+  ALL_QUESTIONS.forEach((q, i) => {
+    const delay = Math.min(i * 30, 800);
+    const card = document.createElement('div');
+    card.className = 'q-card';
+    card.dataset.topic = q.t;
+    card.dataset.diff = q.d;
+    card.dataset.idx = i;
+    card.style.animationDelay = delay + 'ms';
+
+    const letters = ['A','B','C','D'];
+    const optsHTML = q.opts.map((o,j) => `
+      <button class="opt" onclick="selectAnswer(${i},${j},this)" data-opt="${j}">
+        <span class="opt-letter">${letters[j]}</span>
+        <span class="opt-text">${o}</span>
+        <span class="opt-check"></span>
+        <div class="info-wrap" onclick="event.stopPropagation()">
+          <div class="info-btn" title="Why is this wrong/right?">i</div>
+          <div class="info-popup">${q.why[j]}</div>
+        </div>
+      </button>`).join('');
+
+    card.innerHTML = `
+      <div class="card-meta">
+        <span class="q-num">Q${i+1} <span class="topic-tag">${topicLabel(q.t)}</span></span>
+        <span class="diff-badge diff-${q.d}">${q.d}</span>
+      </div>
+      <div class="q-text">${q.q}</div>
+      <div class="options">${optsHTML}</div>
+      <div class="explanation" id="exp-${i}">
+        📖 <strong>Explanation:</strong> ${q.exp}
+      </div>`;
+    grid.appendChild(card);
+  });
+  updateProgress();
+}
+
+function topicLabel(t) {
+  const map = {skeletal:'Skeletal',anatomy:'Anatomical',instruments:'Instruments',specialties:'Specialties'};
+  return map[t] || t;
+}
+
+function selectAnswer(qIdx, optIdx, btn) {
+  const card = document.querySelector(`[data-idx="${qIdx}"]`);
+  if (card.classList.contains('answered')) return;
+  card.classList.add('answered');
+
+  const q = ALL_QUESTIONS[qIdx];
+  const opts = card.querySelectorAll('.opt');
+  opts.forEach(o => o.classList.add('locked'));
+
+  const chosen = opts[optIdx];
+  const correct = opts[q.ans];
+
+  correct.classList.add('correct-ans');
+  correct.querySelector('.opt-check').textContent = '✓';
+
+  if (optIdx !== q.ans) {
+    chosen.classList.add('wrong-ans');
+    chosen.querySelector('.opt-check').textContent = '✗';
+  } else {
+    scoreCount++;
+  }
+
+  answeredCount++;
+  document.getElementById('exp-' + qIdx).classList.add('show');
+  updateStats();
+  updateProgress();
+}
+
+function updateStats() {
+  document.getElementById('answeredCount').textContent = answeredCount;
+  document.getElementById('scoreCount').textContent = scoreCount;
+}
+
+function updateProgress() {
+  const total = document.querySelectorAll('.q-card:not([style*="display: none"])').length || ALL_QUESTIONS.length;
+  const answered = document.querySelectorAll('.q-card.answered:not([style*="display: none"])').length;
+  const pct = total ? Math.round((answered / total) * 100) : 0;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = `${answered} of ${total} answered (${pct}%)`;
+}
+
+function filterCards(topic, btn) {
+  document.querySelectorAll('.filter-bar .chip').forEach((c,i) => { if(i<5) c.classList.remove('active'); });
+  btn.classList.add('active');
+  topicFilter = topic;
+  applyFilters();
+}
+
+function filterDiff(diff, btn) {
+  document.querySelectorAll('.filter-bar .chip').forEach((c,i) => { if(i>=5) c.classList.remove('active'); });
+  btn.classList.add('active');
+  diffFilter = diff;
+  applyFilters();
+}
+
+function applyFilters() {
+  const cards = document.querySelectorAll('.q-card');
+  cards.forEach(card => {
+    const tMatch = topicFilter === 'all' || card.dataset.topic === topicFilter;
+    const dMatch = diffFilter === 'all' || card.dataset.diff === diffFilter;
+    card.style.display = (tMatch && dMatch) ? '' : 'none';
+  });
+  updateProgress();
+}
+
+function submitAll() {
+  const total = ALL_QUESTIONS.length;
+  const pct = Math.round((scoreCount / total) * 100);
+  const banner = document.getElementById('resultBanner');
+  banner.style.display = 'block';
+  document.getElementById('resultScore').textContent = pct + '%';
+  let msg = pct >= 90 ? '🏆 Excellent! You have mastered these topics.' :
+            pct >= 75 ? '👏 Great job! Review the missed questions.' :
+            pct >= 60 ? '📚 Good effort! More study recommended.' :
+            '💪 Keep studying — review the explanations carefully.';
+  document.getElementById('resultMsg').textContent = msg + ` (${scoreCount}/${total} correct)`;
+  banner.scrollIntoView({behavior:'smooth'});
+}
+
+function resetAll() {
+  answeredCount = 0; scoreCount = 0;
+  document.getElementById('resultBanner').style.display = 'none';
+  buildCards();
+  applyFilters();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+buildCards();
+</script>
+</body>
+</html>
